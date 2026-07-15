@@ -1,0 +1,51 @@
+rules_version = '2';
+// ============================================================
+// Aero Panels – Firestore Security Rules
+// Version: 1.0.0
+// ============================================================
+// ARCHITECTURE:
+//   - La web nunca escribe ni lee Firestore directamente
+//     desde el cliente. Todo pasa por Netlify Functions
+//     que usan firebase-admin (acceso privilegiado, bypassea rules).
+//   - El bot de Discord usa firebase-admin igualmente.
+//   - Por eso todas las reglas de cliente son DENY-ALL.
+//
+// Si en el futuro se añade Firebase Auth + SDK cliente,
+// hay secciones comentadas como guía de expansión.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------------------------------
+    // DENY-ALL: Ningún cliente web puede leer/escribir.
+    // El acceso lo gestiona firebase-admin en el servidor.
+    // --------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --------------------------------------------------------
+    // [EXPANSIÓN FUTURA] Si se añade Firebase Auth para admins:
+    //
+    // function isAdmin() {
+    //   return request.auth != null
+    //     && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
+    // }
+    //
+    // match /guilds/{guildId} {
+    //   allow read: if isAdmin();
+    //   allow write: if false; // Solo el bot escribe via Admin SDK
+    // }
+    //
+    // match /logs/{logId} {
+    //   allow read: if isAdmin();
+    //   allow write: if false;
+    // }
+    //
+    // match /bot/status {
+    //   allow read: if isAdmin();
+    //   allow write: if false;
+    // }
+    // --------------------------------------------------------
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "aero-panels-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend infrastructure for Aero Panels using Netlify Functions and Firebase Admin",
+  "main": "index.js",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.20.0"
+  }
+}

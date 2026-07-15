@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aero Bot - Control Panel</title>
+  <link rel="stylesheet" href="./css/dashboard.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+
+  <!-- Auth Screen -->
+  <div id="auth-container">
+    <h1>Aero Control</h1>
+    
+    <div id="auth-message" class="message-box"></div>
+
+    <form id="login-form">
+      <div class="input-group">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" placeholder="Tu usuario" required>
+      </div>
+      <div class="input-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="Tu contraseña" required>
+      </div>
+      
+      <!-- Turnstile Widget -->
+      <div id="turnstile-container"></div>
+      
+      <button type="submit" class="btn" id="btn-login">Iniciar Sesión</button>
+    </form>
+
+    <div class="divider">O entra con</div>
+
+    <button class="btn btn-social" id="btn-google">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z"/></svg>
+      Google
+    </button>
+    <button class="btn btn-social" id="btn-github">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      GitHub
+    </button>
+  </div>
+
+  <!-- Dashboard Screen -->
+  <div id="dashboard-container">
+    <div class="header">
+      <h1>Aero Dashboard</h1>
+      <div class="user-info">
+        <span id="user-welcome">Hola, User</span>
+        <button id="btn-logout" class="btn-logout">Salir</button>
+      </div>
+    </div>
+
+    <div id="dash-message" class="message-box"></div>
+
+    <div class="grid">
+      <!-- Bot Status -->
+      <div class="card">
+        <h2><div class="status-indicator" id="bot-status-indicator"></div> Estado del Bot</h2>
+        <div class="stat-row">
+          <span class="stat-label">Estado</span>
+          <span class="stat-value" id="bot-status">Desconectado</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Ping</span>
+          <span class="stat-value" id="bot-ping">-- ms</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Uptime</span>
+          <span class="stat-value" id="bot-uptime">--</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Memoria</span>
+          <span class="stat-value" id="bot-memory">-- MB</span>
+        </div>
+      </div>
+
+      <!-- AI Config -->
+      <div class="card">
+        <h2>🧠 Configuración de IA</h2>
+        
+        <label class="stat-label">Proveedor Primario</label>
+        <select id="ai-provider">
+          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI</option>
+          <option value="groq">Groq</option>
+          <option value="anthropic">Anthropic</option>
+        </select>
+
+        <label class="stat-label">Modelo Activo (Opcional)</label>
+        <select id="ai-model">
+          <option value="">Por defecto</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+          <option value="gpt-4o">GPT-4o</option>
+          <option value="llama3-70b-8192">Groq - Llama3 70B</option>
+        </select>
+
+        <button id="btn-save-ai" class="btn">Guardar Cambios</button>
+      </div>
+
+      <!-- Token Stats -->
+      <div class="card">
+        <h2>🪙 Uso de Tokens</h2>
+        <div class="input-group">
+          <input type="text" id="guild-id-input" placeholder="ID del Servidor (Guild ID)">
+        </div>
+        <button id="btn-check-tokens" class="btn">Consultar Tokens</button>
+        <div style="margin-top: 1rem;">
+          <div class="stat-row">
+            <span class="stat-label">Total Prompts</span>
+            <span class="stat-value" id="token-prompts">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Completion</span>
+            <span class="stat-value" id="token-completion">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/dashboard.js"></script>
+</body>
+</html>

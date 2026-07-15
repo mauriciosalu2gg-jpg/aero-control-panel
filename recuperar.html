@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050a1a">
+<title>Recuperar cuenta · Aero</title>
+<meta name="description" content="Recupera el acceso a tu Panel de Control de Aero.">
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a href="index.html">← Volver al Panel</a>
+    <span>Aero · Recuperación</span>
+  </div>
+
+  <div class="card">
+    <div class="section-badge">Seguridad</div>
+    <h1>Recuperar cuenta</h1>
+    <p class="subtitle">Completa los pasos y Aero se pondrá en contacto contigo por correo.</p>
+
+    <div id="success" class="success">
+      ✅ ¡Solicitud enviada! Revisa tu correo en las próximas 24 horas.
+    </div>
+
+    <!-- Step Indicators -->
+    <div class="steps-indicator">
+      <div class="step-dot active" data-step="0"></div>
+      <span class="step-label active" data-step="0">Identificación</span>
+      <div class="step-dot" data-step="1"></div>
+      <span class="step-label" data-step="1">Verificación</span>
+      <div class="step-dot" data-step="2"></div>
+      <span class="step-label" data-step="2">Evidencias</span>
+    </div>
+
+    <form id="recovery-form" novalidate>
+      <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
+
+      <!-- ═══ Step 1: Identificación ═══ -->
+      <div class="form-step active" data-step="0">
+        <h2>Identificación</h2>
+
+        <label for="num">Número administrativo <span class="pill">requerido</span></label>
+        <input id="num" name="numero_administrativo" type="text" inputmode="numeric" pattern="[0-9]+" required maxlength="20" placeholder="Ej. 1234">
+
+        <label for="nombre">Nombre completo o usuario de Discord</label>
+        <input id="nombre" name="nombre" type="text" maxlength="80" placeholder="Ej. Aero#0001">
+
+        <label for="discord">ID de Discord <span class="pill" style="background:rgba(255,255,255,0.06);color:var(--text-secondary)">opcional</span></label>
+        <input id="discord" name="discord_id" type="text" maxlength="40" placeholder="Ej. 123456789012345678">
+
+        <button type="button" class="btn" onclick="nextStep()">Siguiente →</button>
+      </div>
+
+      <!-- ═══ Step 2: Verificación ═══ -->
+      <div class="form-step" data-step="1">
+        <h2>Verificación</h2>
+
+        <label for="email">Correo electrónico Gmail <span class="pill">requerido</span></label>
+        <input id="email" name="email" type="email" required maxlength="120" placeholder="tucorreo@gmail.com">
+        <div class="info-box">Se usará este correo para brindarte asistencia remota y enviarte tu nueva contraseña.</div>
+
+        <label for="motivo">Motivo de la recuperación</label>
+        <select id="motivo" name="motivo" required>
+          <option value="">— Selecciona —</option>
+          <option>Olvidé mi contraseña</option>
+          <option>Olvidé mi número administrativo</option>
+          <option>Mi cuenta fue comprometida</option>
+          <option>Otro</option>
+        </select>
+
+        <label for="detalles">Detalles adicionales</label>
+        <textarea id="detalles" name="detalles" maxlength="1000" placeholder="Cuéntanos cualquier detalle que ayude a verificar tu identidad (fecha de creación, última acción, etc.)"></textarea>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">← Atrás</button>
+          <button type="button" class="btn" onclick="nextStep()">Siguiente →</button>
+        </div>
+      </div>
+
+      <!-- ═══ Step 3: Evidencias ═══ -->
+      <div class="form-step" data-step="2">
+        <h2>Evidencias</h2>
+
+        <div class="info-box">
+          Puedes subir capturas de pantalla de tu perfil de Discord, conversaciones con el bot, o cualquier evidencia que demuestre que eres el dueño legítimo de la cuenta.<br><br>
+          <strong>Formatos:</strong> PNG, JPG, PDF &nbsp;·&nbsp; <strong>Máx:</strong> 3 archivos, 5 MB cada uno.
+        </div>
+
+        <div class="file-upload-area" id="dropzone">
+          <div class="upload-icon">📎</div>
+          <div class="upload-text">
+            Arrastra archivos aquí o <strong>haz clic para seleccionar</strong>
+          </div>
+          <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.pdf" hidden>
+        </div>
+        <ul class="file-list" id="file-list"></ul>
+
+        <div class="checkbox-wrap">
+          <input type="checkbox" id="consent" name="consent" required>
+          <label for="consent">Autorizo a Aero a contactarme por Gmail y/o compartir un enlace de Google Drive para asistencia remota.</label>
+        </div>
+
+        <!-- Cloudflare Turnstile -->
+        <div id="turnstile-container" style="margin: 1.2rem 0; display: flex; justify-content: center;"></div>
+
+        <div class="btn-row">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">← Atrás</button>
+          <button class="btn" type="submit" id="submit-btn">Enviar solicitud</button>
+        </div>
+        <p class="note">🔒 Tu información se envía cifrada y solo Aero la puede leer.</p>
+      </div>
+    </form>
+  </div>
+  <footer>© Aero · aero-company.com.mx</footer>
+</div>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script>
+(function () {
+  const form = document.getElementById('recovery-form');
+  const steps = document.querySelectorAll('.form-step');
+  const dots = document.querySelectorAll('.step-dot');
+  const labels = document.querySelectorAll('.step-label');
+  const submitBtn = document.getElementById('submit-btn');
+  let currentStep = 0;
+  let uploadedFiles = [];
+  const MAX_FILES = 3;
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+  // ── Step Navigation ────────────────────────────────────
+  function showStep(index) {
+    steps.forEach((s, i) => {
+      s.classList.toggle('active', i === index);
+    });
+    dots.forEach((d, i) => {
+      d.classList.remove('active', 'done');
+      if (i < index) d.classList.add('done');
+      if (i === index) d.classList.add('active');
+    });
+    labels.forEach((l, i) => {
+      l.classList.remove('active', 'done');
+      if (i < index) l.classList.add('done');
+      if (i === index) l.classList.add('active');
+    });
+    currentStep = index;
+  }
+
+  function validateStep(index) {
+    const step = steps[index];
+    const required = step.querySelectorAll('[required]');
+    for (const field of required) {
+      if (!field.value.trim()) {
+        field.focus();
+        field.style.borderColor = 'var(--error)';
+        setTimeout(() => field.style.borderColor = '', 2000);
+        return false;
+      }
+      // Email validation
+      if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+        field.focus();
+        field.style.borderColor = 'var(--error)';
+        setTimeout(() => field.style.borderColor = '', 2000);
+        return false;
+      }
+    }
+    // Step 3: consent checkbox
+    if (index === 2) {
+      const consent = document.getElementById('consent');
+      if (!consent.checked) {
+        consent.focus();
+        consent.parentElement.style.outline = '1px solid var(--error)';
+        consent.parentElement.style.borderRadius = '8px';
+        setTimeout(() => consent.parentElement.style.outline = '', 2000);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  window.nextStep = function () {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < steps.length - 1) {
+      showStep(currentStep + 1);
+    }
+  };
+
+  window.prevStep = function () {
+    if (currentStep > 0) {
+      showStep(currentStep - 1);
+    }
+  };
+
+  // ── File Upload ────────────────────────────────────────
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('file-input');
+  const fileListEl = document.getElementById('file-list');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change', () => {
+    handleFiles(fileInput.files);
+    fileInput.value = '';
+  });
+
+  function handleFiles(files) {
+    for (const file of files) {
+      if (uploadedFiles.length >= MAX_FILES) break;
+      if (file.size > MAX_SIZE) {
+        alert(`"${file.name}" excede 5 MB.`);
+        continue;
+      }
+      if (!/\.(png|jpe?g|pdf)$/i.test(file.name)) {
+        alert(`"${file.name}" no es un formato válido (PNG, JPG, PDF).`);
+        continue;
+      }
+      uploadedFiles.push(file);
+    }
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileListEl.innerHTML = '';
+    uploadedFiles.forEach((file, i) => {
+      const li = document.createElement('li');
+      li.className = 'file-item';
+      const icon = file.name.match(/\.pdf$/i) ? '📄' : '🖼️';
+      const size = (file.size / 1024).toFixed(0) + ' KB';
+      li.innerHTML = `
+        <span class="file-icon">${icon}</span>
+        <span class="file-name">${file.name}</span>
+        <span class="file-size">${size}</span>
+        <button type="button" class="file-remove" data-i="${i}" title="Eliminar">✕</button>
+      `;
+      fileListEl.appendChild(li);
+    });
+
+    fileListEl.querySelectorAll('.file-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        uploadedFiles.splice(parseInt(btn.dataset.i), 1);
+        renderFileList();
+      });
+    });
+  }
+
+  // ── Turnstile ──────────────────────────────────────────
+  window.onloadTurnstileCallback = function () {
+    fetch('/.netlify/functions/v1/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.turnstileSiteKey && window.turnstile) {
+          window.turnstile.render('#turnstile-container', {
+            sitekey: data.turnstileSiteKey,
+            theme: 'dark'
+          });
+        }
+      })
+      .catch(err => console.error('Error loading Turnstile config:', err));
+  };
+
+  if (window.turnstile) {
+    window.onloadTurnstileCallback();
+  } else {
+    window.addEventListener('load', window.onloadTurnstileCallback);
+  }
+
+  // ── Form Submission ────────────────────────────────────
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!validateStep(currentStep)) return;
+
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span>Enviando…';
+
+    try {
+      const formData = new FormData();
+      formData.append('numero_administrativo', document.getElementById('num').value);
+      formData.append('nombre', document.getElementById('nombre').value);
+      formData.append('discord_id', document.getElementById('discord').value);
+      formData.append('email', document.getElementById('email').value);
+      formData.append('motivo', document.getElementById('motivo').value);
+      formData.append('detalles', document.getElementById('detalles').value);
+      formData.append('consent', document.getElementById('consent').checked);
+
+      // Turnstile token
+      const turnstileInput = form.querySelector('[name="cf-turnstile-response"]');
+      if (turnstileInput) {
+        formData.append('cf-turnstile-response', turnstileInput.value);
+      }
+
+      // Files
+      uploadedFiles.forEach((file, i) => {
+        formData.append(`file_${i}`, file);
+      });
+
+      const res = await fetch('/.netlify/functions/v1/recovery', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Error en el servidor');
+
+      form.reset();
+      uploadedFiles = [];
+      renderFileList();
+      showStep(0);
+      document.getElementById('success').classList.add('show');
+      document.getElementById('success').scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+      console.error(err);
+      alert('Ocurrió un error al enviar la solicitud. Intenta de nuevo.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+})();
+</script>
+</body>
+</html>

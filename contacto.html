@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050a1a">
+<title>Contactar a Aero</title>
+<meta name="description" content="Envía un mensaje directo al equipo de Aero.">
+<link rel="stylesheet" href="_shared.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a href="index.html">← Volver al Panel</a>
+    <span>Aero · Contacto</span>
+  </div>
+
+  <div class="card">
+    <div class="section-badge">Soporte Técnico</div>
+    <h1>Contactar a Aero</h1>
+    <p class="subtitle">Cualquier duda, reporte de bug o propuesta llega directo a <b>aero-company.com.mx</b>.</p>
+
+    <div id="success" class="success">
+      ✅ ¡Mensaje enviado! Te responderemos lo antes posible.
+    </div>
+
+    <form id="contact-form" novalidate>
+      <p class="hp"><label>No llenar: <input name="bot-field"></label></p>
+
+      <label for="nombre">Tu nombre / usuario</label>
+      <input id="nombre" name="nombre" type="text" required maxlength="80" placeholder="Ej. Ryan">
+
+      <label for="email">Correo de contacto</label>
+      <input id="email" name="email" type="email" required maxlength="120" placeholder="tucorreo@ejemplo.com">
+
+      <label for="asunto">Asunto</label>
+      <select id="asunto" name="asunto" required>
+        <option value="">— Selecciona —</option>
+        <option>Reporte de bug</option>
+        <option>Sugerencia / feature request</option>
+        <option>Problema con mi cuenta</option>
+        <option>Colaboración / prensa</option>
+        <option>Otro</option>
+      </select>
+
+      <label for="mensaje">Mensaje</label>
+      <textarea id="mensaje" name="mensaje" required maxlength="2000" placeholder="Escribe tu mensaje aquí..."></textarea>
+
+      <!-- Cloudflare Turnstile -->
+      <div id="turnstile-container" style="margin: 1.2rem 0; display: flex; justify-content: center;"></div>
+
+      <button class="btn" type="submit" id="submit-btn">Enviar mensaje</button>
+      <p class="note">Respondemos en un máximo de 48 horas hábiles.</p>
+    </form>
+  </div>
+  <footer>© Aero · aero-company.com.mx</footer>
+</div>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<script>
+(function () {
+  const form = document.getElementById('contact-form');
+  const submitBtn = document.getElementById('submit-btn');
+
+  // ── Turnstile ──────────────────────────────────────────
+  window.onloadTurnstileCallback = function () {
+    fetch('/.netlify/functions/v1/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.turnstileSiteKey && window.turnstile) {
+          window.turnstile.render('#turnstile-container', {
+            sitekey: data.turnstileSiteKey,
+            theme: 'dark'
+          });
+        }
+      })
+      .catch(err => console.error('Error loading Turnstile config:', err));
+  };
+
+  if (window.turnstile) {
+    window.onloadTurnstileCallback();
+  } else {
+    window.addEventListener('load', window.onloadTurnstileCallback);
+  }
+
+  // ── Form Submission ────────────────────────────────────
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    // Validate required fields
+    const required = form.querySelectorAll('[required]');
+    for (const field of required) {
+      if (!field.value.trim()) {
+        field.focus();
+        field.style.borderColor = 'var(--error)';
+        setTimeout(() => field.style.borderColor = '', 2000);
+        return;
+      }
+      if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+        field.focus();
+        field.style.borderColor = 'var(--error)';
+        setTimeout(() => field.style.borderColor = '', 2000);
+        return;
+      }
+    }
+
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span>Enviando…';
+
+    try {
+      const payload = {
+        nombre: document.getElementById('nombre').value,
+        email: document.getElementById('email').value,
+        asunto: document.getElementById('asunto').value,
+        mensaje: document.getElementById('mensaje').value
+      };
+
+      // Turnstile token
+      const turnstileInput = form.querySelector('[name="cf-turnstile-response"]');
+      if (turnstileInput) {
+        payload['cf-turnstile-response'] = turnstileInput.value;
+      }
+
+      const res = await fetch('/.netlify/functions/v1/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Error en el servidor');
+
+      form.reset();
+      document.getElementById('success').classList.add('show');
+      document.getElementById('success').scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+      console.error(err);
+      alert('Ocurrió un error al enviar el mensaje. Intenta de nuevo.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+})();
+</script>
+</body>
+</html>
