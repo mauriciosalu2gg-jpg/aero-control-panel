@@ -106,6 +106,8 @@ async function loadGuilds() {
     msgGuildId.innerHTML = guildOptions;
   } catch (err) {
     console.error('Error al cargar servidores:', err.message);
+    inputGuild.innerHTML = `<option value="">Error: ${err.message}</option>`;
+    msgGuildId.innerHTML = `<option value="">Error: ${err.message}</option>`;
   }
 }
 
@@ -368,7 +370,7 @@ async function fetchBotStatus() {
     // Demasiados fallos seguidos → dejar de hacer polling
     if (consecutiveErrors >= MAX_STATUS_ERRORS) {
       stopStatusPolling();
-      botStatusEl.textContent = 'Error de conexión';
+      botStatusEl.textContent = `Error: ${err.message.substring(0, 30)}...`;
       botStatusDot.className = 'status-indicator';
     }
   }

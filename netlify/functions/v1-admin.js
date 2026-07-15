@@ -37,7 +37,7 @@ async function adminHandler(event, context) {
       }
       return successResponse(doc.data());
     } catch (err) {
-      return errorResponse('Error al obtener el estado del bot', 500);
+      return errorResponse(`Error al obtener el estado del bot: ${err.message}`, 500);
     }
   }
 
@@ -61,7 +61,7 @@ async function adminHandler(event, context) {
       return successResponse(list);
     } catch (err) {
       console.error(err);
-      return errorResponse('Error al obtener la lista de servidores', 500);
+      return errorResponse(`Error al obtener la lista de servidores: ${err.message}`, 500);
     }
   }
 
