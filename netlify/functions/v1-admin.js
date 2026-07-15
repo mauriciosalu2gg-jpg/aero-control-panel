@@ -8,14 +8,30 @@ import { rolTienePermiso } from '../../services/firebase/roles.js';
 async function adminHandler(event, context) {
   const { rol, username } = event.user;
 
-  // Validar permisos usando el sistema de roles de Firestore (fuente única de verdad)
-  const esAdmin = await rolTienePermiso(rol, 'users_manage');
-  if (!esAdmin) {
-    return errorResponse('Acceso denegado. Permisos insuficientes.', 403);
-  }
-
   const queryParams = event.queryStringParameters || {};
   const action = queryParams.action || '';
+
+  // Mapeo de acciones a sus permisos correspondientes
+  const permisosRequeridos = {
+    'logs': 'logs_view',
+    'status': 'dashboard',
+    'guilds': 'dashboard',
+    'recoveries': 'users_manage',
+    'guild-tokens': 'dashboard',
+    'update-ai-config': 'ai_settings',
+    'resolve-recovery': 'users_manage',
+    'send-message': 'discord_send',
+    'save-ai-config': 'ai_settings',
+    'get-ai-config': 'dashboard'
+  };
+
+  const permisoNecesario = permisosRequeridos[action];
+  if (permisoNecesario) {
+    const autorizado = await rolTienePermiso(rol, permisoNecesario);
+    if (!autorizado) {
+      return errorResponse(`Acceso denegado. Permisos insuficientes para esta accion (${permisoNecesario}).`, 403);
+    }
+  }
 
   // ── GET: Obtener logs de auditoría ────────────────────
   if (event.httpMethod === 'GET' && action === 'logs') {
