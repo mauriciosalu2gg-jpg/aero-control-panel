@@ -416,6 +416,30 @@ async function updateAiHealth() {
       statusDiv.innerHTML = `<span class="dot ${dotClass}"></span>${text}`;
       statusDiv.title = `Errores: ${p.errors} | Usado: ${p.timesUsed}\nÚltimo error: ${p.lastError || 'Ninguno'}`;
     });
+
+    // Update Discord bot stats
+    if (health.discord) {
+      const pingEl = document.getElementById('stat-ping');
+      const gwEl = document.getElementById('stat-gw');
+      const upEl = document.getElementById('stat-uptime');
+      
+      if (pingEl) pingEl.textContent = `${health.discord.ping > -1 ? health.discord.ping : 0} ms`;
+      if (gwEl) {
+        if (health.discord.status === 'Conectado') {
+          gwEl.innerHTML = `<span style="color:#7ee6a3">●</span> Conectado`;
+        } else {
+          gwEl.innerHTML = `<span style="color:#ff7a7a">●</span> ${health.discord.status}`;
+        }
+      }
+      if (upEl && health.discord.uptime) {
+        const totalSecs = Math.floor(health.discord.uptime / 1000);
+        const d = Math.floor(totalSecs / 86400);
+        const h = Math.floor((totalSecs % 86400) / 3600);
+        const m = Math.floor((totalSecs % 3600) / 60);
+        upEl.textContent = `${d > 0 ? d+'d ' : ''}${h}h ${m}m`;
+      }
+    }
+
   } catch (err) {
     console.warn('Error al actualizar salud IA:', err.message);
   }

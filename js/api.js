@@ -44,7 +44,10 @@ export async function apiFetch(endpoint, options = {}) {
       const errData = await response.json();
       errMsg = errData.error || errData.message || errMsg;
     } catch {}
-    throw new Error(errMsg);
+    
+    const error = new Error(errMsg);
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();
@@ -156,10 +159,11 @@ export const API = {
   /**
    * Envia un mensaje al bot de Discord a través de Firestore.
    */
-  async sendMessage(guildId, channelId, content) {
+  async sendMessage(guildId, channelId, content, opts = {}) {
     return apiFetch('/admin?action=send-message', {
       method: 'POST',
-      body: JSON.stringify({ guildId, channelId, content })
+      body: JSON.stringify({ guildId, channelId, content }),
+      ...opts
     });
   },
 
