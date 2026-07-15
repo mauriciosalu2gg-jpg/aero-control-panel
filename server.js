@@ -80,7 +80,7 @@ app.all('/api/v1/user', (req, res) => netlifyAdapter(req, res, userHandler));
 app.use(express.static(__dirname));
 
 // Cualquier otra ruta que no sea API, devolver index.html para soportar navegación (SPA)
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
