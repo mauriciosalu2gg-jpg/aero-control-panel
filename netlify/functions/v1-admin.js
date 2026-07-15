@@ -178,7 +178,7 @@ async function adminHandler(event, context) {
         content,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        sender: event.user.uid
+        sender: event.user.id || event.user.uid || 'unknown'
       });
       return successResponse({ message: 'Mensaje encolado' });
     } catch (err) {
