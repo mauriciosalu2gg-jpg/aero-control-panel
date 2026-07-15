@@ -150,6 +150,16 @@ export const API = {
   },
 
   /**
+   * Envia un mensaje al bot de Discord a través de Firestore.
+   */
+  async sendMessage(guildId, channelId, content) {
+    return apiFetch('/admin?action=send-message', {
+      method: 'POST',
+      body: JSON.stringify({ guildId, channelId, content })
+    });
+  },
+
+  /**
    * Guarda la configuración de IA (proveedor + API Key + modelo) en Firestore.
    * El backend auto-detecta el proveedor según el prefijo de la API Key.
    * @param {string} provider  Proveedor seleccionado en la UI

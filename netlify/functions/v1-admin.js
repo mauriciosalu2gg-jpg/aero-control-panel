@@ -126,6 +126,36 @@ async function adminHandler(event, context) {
       return errorResponse('Error al resolver la solicitud de recuperación', 500);
     }
   }
+  // ── POST: Enviar Mensaje a Bot ────────────────────────
+  if (event.httpMethod === 'POST' && action === 'send-message') {
+    let body = {};
+    try {
+      body = JSON.parse(event.body || '{}');
+    } catch (e) {
+      return errorResponse('Body no válido', 400);
+    }
+
+    const { guildId, channelId, content } = body;
+    if (!guildId || !channelId || !content) {
+      return errorResponse('Faltan campos (guildId, channelId, content)', 400);
+    }
+
+    try {
+      await db.collection('bot_actions').add({
+        action: 'send_message',
+        guildId,
+        channelId,
+        content,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        sender: decoded.uid
+      });
+      return successResponse({ message: 'Mensaje encolado' });
+    } catch (err) {
+      console.error(err);
+      return errorResponse('Error al encolar el mensaje', 500);
+    }
+  }
 
   // ── POST: Guardar configuración de IA ─────────────────
   if (event.httpMethod === 'POST' && action === 'save-ai-config') {

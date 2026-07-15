@@ -79,6 +79,10 @@ const inputGuild       = $('guild-id-input');
 const btnCheckTokens   = $('btn-check-tokens');
 const tokenPromptsEl   = $('token-prompts');
 const tokenCompletionEl = $('token-completion');
+const btnSendMessage   = $('btn-send-message');
+const msgGuildId       = $('msg-guild-id');
+const msgChannelId     = $('msg-channel-id');
+const msgContent       = $('msg-content');
 const userWelcomeEl    = $('user-welcome');
 
 // ═══════════════════════════════════════════════════════════════
@@ -134,7 +138,41 @@ function doLogout() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MENSAJES (toast)
+// ENVÍO DE MENSAJES
+// ═══════════════════════════════════════════════════════════════
+if (btnSendMessage) {
+  btnSendMessage.addEventListener('click', async () => {
+    const guildId = msgGuildId.value.trim();
+    const channelId = msgChannelId.value.trim();
+    const content = msgContent.value.trim();
+
+    if (!guildId || !channelId || !content) {
+      showMessage(dashMsg, 'Por favor completa todos los campos del mensaje.', 'error');
+      return;
+    }
+
+    const originalText = btnSendMessage.innerText;
+    btnSendMessage.innerText = 'Enviando...';
+    btnSendMessage.disabled = true;
+
+    try {
+      const result = await API.sendMessage(guildId, channelId, content);
+      if (result.error) throw new Error(result.error);
+      
+      showMessage(dashMsg, 'Mensaje encolado para envío.', 'success');
+      msgContent.value = '';
+    } catch (err) {
+      console.error(err);
+      showMessage(dashMsg, 'Error al enviar el mensaje: ' + err.message, 'error');
+    } finally {
+      btnSendMessage.innerText = originalText;
+      btnSendMessage.disabled = false;
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CERRAR SESIÓN (toast)
 // ═══════════════════════════════════════════════════════════════
 function showMessage(el, text, type) {
   el.textContent = text;
