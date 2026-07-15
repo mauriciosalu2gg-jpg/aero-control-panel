@@ -415,6 +415,20 @@ async function updateAiHealth() {
 
       statusDiv.innerHTML = `<span class="dot ${dotClass}"></span>${text}`;
       statusDiv.title = `Errores: ${p.errors} | Usado: ${p.timesUsed}\nÚltimo error: ${p.lastError || 'Ninguno'}`;
+      
+      // Highlight active provider
+      let isActive = false;
+      if (health.forcedProvider && health.forcedProvider === p.name) {
+        isActive = true;
+      } else if (!health.forcedProvider && health.activeProvider && health.activeProvider.name === p.name) {
+        isActive = true;
+      }
+      
+      if (isActive) {
+        el.classList.add('is-active');
+      } else {
+        el.classList.remove('is-active');
+      }
     });
 
     // Update Discord bot stats
@@ -483,6 +497,9 @@ function setupAiConfigForm() {
         const detected = result.detectedProvider || provider;
 
         showNotification(`✅ Configuración guardada. Proveedor activo: ${detected.toUpperCase()}`, 'success');
+
+        // Immediate sync after changing config
+        setTimeout(updateAiHealth, 500);
 
         // Limpiar el input de la API Key por seguridad
         if (apiKeyInput) {

@@ -64,8 +64,8 @@ body {
   padding: 0.9rem 0;
   border-bottom: 1px solid var(--card-border);
   background: rgba(5, 10, 26, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .topbar a {
@@ -91,8 +91,8 @@ body {
 /* ── Card (Glassmorphic) ────────────────────────────────── */
 .card {
   background: var(--card-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
