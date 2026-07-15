@@ -24,12 +24,12 @@ async function initFirebase() {
 
     // TODO: Pegar tu configuración pública de Firebase aquí
     const firebaseConfig = {
-      apiKey: "AIzaSyCX3-zgpK5yBt48mBA5zgRzy__QMtgCmhs",
-      authDomain: "aero-panels.firebaseapp.com",
-      projectId: "aero-panels",
-      storageBucket: "aero-panels.firebasestorage.app",
-      messagingSenderId: "762340041792",
-      appId: "1:762340041792:web:f7f1225fb31943c6bc2ba5"
+      apiKey: "AIzaSyDmcDU5yqOEMRaGQg8__wM3qklJeT1cCwk",
+      authDomain: "alero-webs.firebaseapp.com",
+      projectId: "alero-webs",
+      storageBucket: "alero-webs.firebasestorage.app",
+      messagingSenderId: "1047558398308",
+      appId: "1:1047558398308:web:6a21a864890cb225349a71"
     };
 
     // Si no hay apiKey configurado, no inicializar
