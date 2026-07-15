@@ -92,6 +92,42 @@ let statusInterval = null;
 let consecutiveErrors = 0;
 const MAX_STATUS_ERRORS = 5;
 
+let cachedGuilds = [];
+
+async function loadGuilds() {
+  try {
+    const guilds = await apiFetch('/admin?action=guilds', { method: 'GET' });
+    cachedGuilds = guilds || [];
+    
+    const guildOptions = '<option value="">Selecciona un servidor...</option>' + 
+      cachedGuilds.map(g => `<option value="${g.id}">🟢 ${g.name}</option>`).join('');
+      
+    inputGuild.innerHTML = guildOptions;
+    msgGuildId.innerHTML = guildOptions;
+  } catch (err) {
+    console.error('Error al cargar servidores:', err.message);
+  }
+}
+
+inputGuild.addEventListener('change', () => {
+  if (inputGuild.value) {
+    btnCheckTokens.click();
+  }
+});
+
+msgGuildId.addEventListener('change', () => {
+  const selectedGuild = cachedGuilds.find(g => g.id === msgGuildId.value);
+  if (!selectedGuild || !selectedGuild.channels || selectedGuild.channels.length === 0) {
+    msgChannelId.innerHTML = '<option value="">Selecciona un canal...</option>';
+    return;
+  }
+  
+  const channelOptions = '<option value="">Selecciona un canal...</option>' + 
+    selectedGuild.channels.map(c => `<option value="${c.id}"># ${c.name}</option>`).join('');
+    
+  msgChannelId.innerHTML = channelOptions;
+});
+
 // ═══════════════════════════════════════════════════════════════
 // INICIALIZACIÓN
 // ═══════════════════════════════════════════════════════════════
@@ -127,6 +163,7 @@ function showDashboard(user) {
 
   // Primera carga + polling
   fetchBotStatus();
+  loadGuilds();
   startStatusPolling();
 }
 
@@ -367,6 +404,10 @@ btnCheckTokens.addEventListener('click', async () => {
   }
 
   try {
+    // Show loading
+    tokenPromptsEl.textContent = '...';
+    tokenCompletionEl.textContent = '...';
+    
     const stats = await apiFetch(`/admin?action=guild-tokens&guildId=${encodeURIComponent(guildId)}`, {
       method: 'GET'
     });

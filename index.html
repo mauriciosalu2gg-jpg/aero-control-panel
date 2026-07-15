@@ -107,7 +107,9 @@
       <div class="card">
         <h2>🪙 Uso de Tokens</h2>
         <div class="input-group">
-          <input type="text" id="guild-id-input" placeholder="ID del Servidor (Guild ID)">
+          <select id="guild-id-input" style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; padding: 12px; appearance: none; cursor: pointer;">
+            <option value="">Selecciona un servidor...</option>
+          </select>
         </div>
         <button id="btn-check-tokens" class="btn">Consultar Tokens</button>
         <div style="margin-top: 1rem;">
@@ -125,10 +127,14 @@
       <div class="card">
         <h2>✉️ Enviar Mensaje</h2>
         <div class="input-group">
-          <input type="text" id="msg-guild-id" placeholder="ID del Servidor (Guild ID)">
+          <select id="msg-guild-id" style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; padding: 12px; appearance: none; cursor: pointer;">
+            <option value="">Selecciona un servidor...</option>
+          </select>
         </div>
         <div class="input-group" style="margin-top: 10px;">
-          <input type="text" id="msg-channel-id" placeholder="ID del Canal">
+          <select id="msg-channel-id" style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; padding: 12px; appearance: none; cursor: pointer;">
+            <option value="">Selecciona un canal...</option>
+          </select>
         </div>
         <div class="input-group" style="margin-top: 10px;">
           <textarea id="msg-content" rows="3" placeholder="Mensaje para enviar..." style="width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white; padding: 12px;"></textarea>

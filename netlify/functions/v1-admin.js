@@ -45,9 +45,22 @@ async function adminHandler(event, context) {
   if (event.httpMethod === 'GET' && action === 'guilds') {
     try {
       const snapshot = await db.collection('guilds').get();
-      const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const list = await Promise.all(snapshot.docs.map(async (d) => {
+        const guildData = { id: d.id, ...d.data() };
+        
+        // Cargar subcolección de canales
+        try {
+          const channelsSnap = await db.collection('guilds').doc(d.id).collection('channels').orderBy('position', 'asc').get();
+          guildData.channels = channelsSnap.docs.map(c => ({ id: c.id, ...c.data() }));
+        } catch (e) {
+          guildData.channels = [];
+        }
+        
+        return guildData;
+      }));
       return successResponse(list);
     } catch (err) {
+      console.error(err);
       return errorResponse('Error al obtener la lista de servidores', 500);
     }
   }
