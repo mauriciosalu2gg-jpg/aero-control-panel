@@ -21,8 +21,9 @@ async function adminHandler(event, context) {
     'update-ai-config': 'ai_settings',
     'resolve-recovery': 'users_manage',
     'send-message': 'discord_send',
-    'save-ai-config': 'ai_settings',
-    'get-ai-config': 'dashboard'
+    'save-ai-config': 'users_manage', // Modificar requiere ser admin
+    'get-ai-config': 'dashboard',
+    'get-ai-health': 'dashboard'
   };
 
   const permisoNecesario = permisosRequeridos[action];
@@ -177,7 +178,7 @@ async function adminHandler(event, context) {
         content,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        sender: decoded.uid
+        sender: event.user.uid
       });
       return successResponse({ message: 'Mensaje encolado' });
     } catch (err) {
@@ -268,6 +269,19 @@ async function adminHandler(event, context) {
       return successResponse(data);
     } catch (err) {
       return errorResponse('Error al obtener la configuración de IA', 500);
+    }
+  }
+
+  // ── GET: Obtener estado de salud de IA (Tiempo Real) ──
+  if (event.httpMethod === 'GET' && action === 'get-ai-health') {
+    try {
+      const doc = await db.collection('bot').doc('ai_health').get();
+      if (!doc.exists) {
+        return successResponse({ providers: [] });
+      }
+      return successResponse(doc.data());
+    } catch (err) {
+      return errorResponse('Error al obtener la salud de IA', 500);
     }
   }
 

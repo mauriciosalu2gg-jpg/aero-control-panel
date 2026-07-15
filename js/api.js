@@ -149,6 +149,10 @@ export const API = {
     return apiFetch('/admin?action=get-ai-config', { method: 'GET' });
   },
 
+  async getAiHealth() {
+    return apiFetch('/admin?action=get-ai-health', { method: 'GET' });
+  },
+
   /**
    * Envia un mensaje al bot de Discord a través de Firestore.
    */

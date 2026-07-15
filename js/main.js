@@ -345,6 +345,8 @@ function cerrarSesionLocal() {
   abrirLogin();
 }
 
+let _aiHealthInterval = null;
+
 /**
  * Carga la configuración de IA activa desde Firestore y la pinta en la UI.
  */
@@ -372,8 +374,50 @@ async function loadAiConfig() {
     if (apiKeyInput && config.apiKey) {
       apiKeyInput.placeholder = `Clave guardada: ${config.apiKey}`;
     }
+
+    // Arrancar el polling de salud de la IA
+    if (!_aiHealthInterval) {
+      updateAiHealth(); // primera llamada inmediata
+      _aiHealthInterval = setInterval(updateAiHealth, 30000); // cada 30s
+    }
   } catch (err) {
-    console.warn('No se pudo cargar la configuración de IA (puede que Firestore no esté activo aún):', err.message);
+    console.warn('No se pudo cargar la configuración de IA:', err.message);
+  }
+}
+
+async function updateAiHealth() {
+  try {
+    const health = await API.getAiHealth();
+    if (!health || !health.providers) return;
+    
+    health.providers.forEach(p => {
+      const el = document.querySelector(`.ai-provider[data-provider="${p.name}"]`);
+      if (!el) return;
+      const statusDiv = el.querySelector('.status');
+      if (!statusDiv) return;
+
+      let dotClass = 'off';
+      let text = 'Offline';
+
+      if (p.status === 'Healthy') {
+        dotClass = 'on';
+        text = `${p.averageLatencyMs || 0}ms`;
+      } else if (p.status === 'Slow') {
+        dotClass = 'warn';
+        text = `${p.averageLatencyMs || 0}ms (Lento)`;
+      } else if (p.status === 'Rate Limited' || p.status === 'Quota Exceeded') {
+        dotClass = 'warn';
+        text = 'Límite alcanzado';
+      } else if (p.status === 'Unavailable' || p.status === 'Offline') {
+        dotClass = 'off';
+        text = p.lastError ? p.lastError.substring(0, 15) + '...' : 'Offline';
+      }
+
+      statusDiv.innerHTML = `<span class="dot ${dotClass}"></span>${text}`;
+      statusDiv.title = `Errores: ${p.errors} | Usado: ${p.timesUsed}\nÚltimo error: ${p.lastError || 'Ninguno'}`;
+    });
+  } catch (err) {
+    console.warn('Error al actualizar salud IA:', err.message);
   }
 }
 
