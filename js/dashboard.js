@@ -24,9 +24,12 @@ async function initFirebase() {
 
     // TODO: Pegar tu configuración pública de Firebase aquí
     const firebaseConfig = {
-      // apiKey: "TU_API_KEY",
-      // authDomain: "TU_PROYECTO.firebaseapp.com",
-      // projectId: "TU_PROYECTO",
+      apiKey: "AIzaSyCX3-zgpK5yBt48mBA5zgRzy__QMtgCmhs",
+      authDomain: "aero-panels.firebaseapp.com",
+      projectId: "aero-panels",
+      storageBucket: "aero-panels.firebasestorage.app",
+      messagingSenderId: "762340041792",
+      appId: "1:762340041792:web:f7f1225fb31943c6bc2ba5"
     };
 
     // Si no hay apiKey configurado, no inicializar
