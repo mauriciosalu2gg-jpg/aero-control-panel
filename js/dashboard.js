@@ -303,10 +303,19 @@ async function fetchBotStatus() {
       botStatusDot.className = 'status-indicator';
     }
 
-    botPingEl.textContent  = status.ping ? `${status.ping} ms` : '-- ms';
-    botUptimeEl.textContent = status.uptime || '--';
-    botMemoryEl.textContent = status.memory
-      ? `${Math.round(status.memory / 1024 / 1024)} MB`
+    botPingEl.textContent  = status.latencyMs ? `${status.latencyMs} ms` : '-- ms';
+    
+    let uptimeText = '--';
+    if (status.uptimeSeconds) {
+      const d = Math.floor(status.uptimeSeconds / 86400);
+      const h = Math.floor((status.uptimeSeconds % 86400) / 3600);
+      const m = Math.floor((status.uptimeSeconds % 3600) / 60);
+      uptimeText = `${d}d ${h}h ${m}m`;
+    }
+    botUptimeEl.textContent = uptimeText;
+
+    botMemoryEl.textContent = status.memoryUsageMb
+      ? `${status.memoryUsageMb} MB`
       : '-- MB';
 
   } catch (err) {
