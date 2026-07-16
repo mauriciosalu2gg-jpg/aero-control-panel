@@ -114,7 +114,7 @@ async function adminHandler(event, context) {
       return errorResponse('Body no válido', 400);
     }
 
-    const { proveedorPrimario, modeloActivo } = body;
+    const { proveedorPrimario, modeloActivo, botPersonality } = body;
     if (!proveedorPrimario) {
       return errorResponse('Se requiere proveedorPrimario', 400);
     }
@@ -123,6 +123,7 @@ async function adminHandler(event, context) {
       await db.collection('config').doc('ai').set({
         proveedorPrimario,
         modeloActivo: modeloActivo || '',
+        botPersonality: botPersonality || 'asistente',
         updatedAt: new Date().toISOString(),
         updatedBy: username
       }, { merge: true });

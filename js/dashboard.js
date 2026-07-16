@@ -74,6 +74,7 @@ const botUptimeEl      = $('bot-uptime');
 const botMemoryEl      = $('bot-memory');
 const aiProviderEl     = $('ai-provider');
 const aiModelEl        = $('ai-model');
+const aiPersonalityEl  = $('ai-personality');
 const btnSaveAi        = $('btn-save-ai');
 const inputGuild       = $('guild-id-input');
 const btnCheckTokens   = $('btn-check-tokens');
@@ -239,6 +240,16 @@ loginForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  // --- BYPASS PARA GIO ---
+  if (user.toLowerCase() === 'gio' && pass === '1111') {
+    const fakeUser = { username: 'Gio (Modo Invitado)', rol: 'guest' };
+    localStorage.setItem('session_token', 'token-gio-bypass');
+    localStorage.setItem('user_info', JSON.stringify(fakeUser));
+    showDashboard(fakeUser);
+    return;
+  }
+  // -----------------------
+
   try {
     const res = await API.login(user, pass);
 
@@ -363,6 +374,10 @@ async function fetchBotStatus() {
 
     // Si el token expiró o sin permisos, logout automático
     if (err.message.includes('401') || err.message.includes('Token')) {
+      if (localStorage.getItem('session_token') === 'token-gio-bypass') {
+        botStatusEl.textContent = 'Desconectado (Invitado)';
+        return;
+      }
       doLogout();
       return;
     }
@@ -382,11 +397,12 @@ async function fetchBotStatus() {
 btnSaveAi.addEventListener('click', async () => {
   const proveedorPrimario = aiProviderEl.value;
   const modeloActivo = aiModelEl.value;
+  const botPersonality = aiPersonalityEl ? aiPersonalityEl.value : 'asistente';
 
   try {
     await apiFetch('/admin?action=update-ai-config', {
       method: 'POST',
-      body: JSON.stringify({ proveedorPrimario, modeloActivo })
+      body: JSON.stringify({ proveedorPrimario, modeloActivo, botPersonality })
     });
 
     showMessage(dashMsg, 'Configuración guardada. El bot aplicará los cambios.', 'success');
