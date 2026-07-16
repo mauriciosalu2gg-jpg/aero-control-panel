@@ -180,6 +180,12 @@ function doLogout() {
 // ═══════════════════════════════════════════════════════════════
 // ENVÍO DE MENSAJES
 // ═══════════════════════════════════════════════════════════════
+const Servers = {
+  send: async (guildId, channelId, content) => {
+    return await API.sendMessage(guildId, channelId, content);
+  }
+};
+
 if (btnSendMessage) {
   btnSendMessage.addEventListener('click', async () => {
     const guildId = msgGuildId.value.trim();
@@ -196,7 +202,7 @@ if (btnSendMessage) {
     btnSendMessage.disabled = true;
 
     try {
-      const result = await API.sendMessage(guildId, channelId, content);
+      const result = await Servers.send(guildId, channelId, content);
       if (result.error) throw new Error(result.error);
       
       showMessage(dashMsg, 'Mensaje encolado para envío.', 'success');

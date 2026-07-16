@@ -170,6 +170,13 @@ async function adminHandler(event, context) {
     if (!guildId || !channelId || !content) {
       return errorResponse('Faltan campos (guildId, channelId, content)', 400);
     }
+    
+    if (typeof content !== 'string' || content.length > 2000) {
+      return errorResponse('Mensaje excede la longitud permitida (2000 caracteres)', 400);
+    }
+    if (typeof guildId !== 'string' || typeof channelId !== 'string' || guildId.length < 17 || channelId.length < 17) {
+      return errorResponse('ID de servidor o canal inválido', 400);
+    }
 
     try {
       await db.collection('bot_actions').add({
