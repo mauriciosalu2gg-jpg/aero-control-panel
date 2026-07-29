@@ -544,7 +544,7 @@ client.once('ready', async () => {
   const syncStatusToFirestore = async () => {
     if (!db) return;
     try {
-      const { getGlobalTokenUsage } = await import('./core/memory/index.js');
+      const { getGlobalTokenUsage, registerGuildLocal } = await import('./core/memory/index.js');
       const tokenUsage = await getGlobalTokenUsage().catch(() => 0);
       const activeProviders = secrets.getAvailableProviders().map(p => p.name);
 
@@ -558,6 +558,12 @@ client.once('ready', async () => {
         ping: client.ws?.ping || 0,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+
+      if (client.guilds?.cache?.size > 0) {
+        for (const guild of client.guilds.cache.values()) {
+          await registerGuildLocal(guild).catch(() => {});
+        }
+      }
     } catch (e) {}
   };
 
@@ -1161,8 +1167,11 @@ client.on('messageCreate', async (message) => {
     }
 
     // 2. Contexto y mood
+    const userPoints = guildId ? await getUserPoints(guildId, message.author.id).catch(() => 0) : 0;
     const context = analyzeContext(memory.messages, message, client.user.id);
     context.isOwnerMessage = isOwner(message.author);
+    context.guildId = guildId;
+    context.userPoints = userPoints;
     const moodInfo = detectMood(context);
 
     if (moodInfo.mood === 'funador' && !flags.funador) {
@@ -1190,7 +1199,6 @@ client.on('messageCreate', async (message) => {
     const webContext = needsWebSearch(content) ? await webSearch(content).catch(() => null) : null;
 
     // 5. Llamada a la IA
-    const userPoints = guildId ? await getUserPoints(guildId, message.author.id).catch(() => 0) : 0;
     const intent = (message.attachments.size > 0 || urlText) ? 'document' : 'chat';
     
     let mediaSummary = '';

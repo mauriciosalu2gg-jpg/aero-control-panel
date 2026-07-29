@@ -10,9 +10,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import secrets from './secrets.js';
 import { setManualMood, getManualMood } from './core/moodEngine.js';
-import { purgeEntireGlobalMemory, purgeUserMemory, getAllUserServerMemories, getUserMemory } from './core/memory/index.js';
+import { purgeEntireGlobalMemory, purgeUserMemory, getAllUserServerMemories, getUserMemory, getAllMemoryForWebPanel } from './core/memory/index.js';
 import { getGuildEmojiCatalog } from './core/emojiManager.js';
 import { getGlobalTokenUsage } from './core/memory/index.js';
+import { db } from './database/firebase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +22,7 @@ const BOT_REMOTE_URL = process.env.BOT_REMOTE_URL || 'https://aero-discord-bot.o
 async function fetchFromBot(endpoint, options = {}) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(`${BOT_REMOTE_URL}${endpoint}`, {
       ...options,
       signal: controller.signal
@@ -170,7 +171,7 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
             const channelsSnap = await doc.ref.collection('channels').get().catch(() => null);
             const textChannels = (channelsSnap && !channelsSnap.empty)
               ? channelsSnap.docs.map(cDoc => ({ id: cDoc.id, name: cDoc.data().name || 'canal' }))
-              : [{ id: gData.id, name: 'general' }];
+              : [{ id: gData.id || doc.id, name: 'general' }];
 
             list.push({
               id: doc.id,
@@ -283,43 +284,11 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
         if (remoteMem) return res.json(remoteMem);
       }
 
-      if (db) {
-        const usersSnap = await db.collection('users').get().catch(() => null);
-        if (usersSnap && !usersSnap.empty) {
-          const servers = [];
-          for (const uDoc of usersSnap.docs) {
-            const uData = uDoc.data();
-            const memsSnap = await uDoc.ref.collection('memories').get().catch(() => null);
-            const facts = [];
-            if (memsSnap && !memsSnap.empty) {
-              memsSnap.docs.forEach(mDoc => {
-                const mData = mDoc.data();
-                if (mData.facts && Array.isArray(mData.facts)) {
-                  facts.push(...mData.facts);
-                } else if (mData.fact) {
-                  facts.push(mData.fact);
-                }
-              });
-            }
-            if (facts.length > 0 || uData.summary) {
-              servers.push({
-                serverName: uData.username || `Usuario (${uDoc.id})`,
-                facts,
-                summary: uData.summary || ''
-              });
-            }
-          }
-          if (servers.length > 0) {
-            return res.json({ type: 'all_servers', count: servers.length, servers });
-          }
-        }
-      }
-
-      const serverMemories = getAllUserServerMemories(null);
+      const servers = await getAllMemoryForWebPanel();
       res.json({
         type: 'all_servers',
-        count: serverMemories.length,
-        servers: serverMemories,
+        count: servers.length,
+        servers: servers,
       });
     } catch (err) {
       res.status(500).json({ error: err.message });

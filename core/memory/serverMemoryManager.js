@@ -100,16 +100,30 @@ export function readServerMemory(guildId) {
  */
 export async function saveServerMemory(guildId, data) {
   const filePath = getServerMemoryPath(guildId);
-  data.updatedAt = new Date().toISOString();
+  const existing = readServerMemory(guildId) || {};
+  const mergedData = {
+    serverId: guildId,
+    name: data.name || existing.name || 'Servidor',
+    createdAt: existing.createdAt || new Date().toISOString(),
+    ...existing,
+    ...data,
+    facts: [...new Set([...(existing.facts || []), ...(data.facts || [])])],
+    users: {
+      ...(existing.users || {}),
+      ...(data.users || {})
+    },
+    updatedAt: new Date().toISOString()
+  };
+
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(mergedData, null, 2), 'utf8');
   } catch (err) {
     console.warn(`[serverMemory] Error guardando JSON del servidor ${guildId}:`, err.message);
   }
 
   if (db) {
     try {
-      await db.collection('memoryScopes').doc(guildId).set(data, { merge: true });
+      await db.collection('memoryScopes').doc(guildId).set(mergedData, { merge: true });
     } catch { /* ignore */ }
   }
 }

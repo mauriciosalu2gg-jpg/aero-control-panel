@@ -224,6 +224,30 @@ export async function saveUserMemory(userId, guildId, mode, memoryData, channelI
   let summarized = false;
   let topicClosed = null;
 
+  // Extracción automática en tiempo real de gustos, comidas, fechas y hechos
+  if (memoryData.messages && memoryData.messages.length > 0) {
+    const lastUserMsg = [...memoryData.messages].reverse().find(m => m.role === 'user');
+    if (lastUserMsg && lastUserMsg.content) {
+      const text = lastUserMsg.content;
+      const lower = text.toLowerCase();
+      memoryData.facts = memoryData.facts || [];
+
+      if (/milanesa|pan|taco|tarta|comida|pizza|hamburguesa|sushi/i.test(lower)) {
+        const fact = `Le gusta o prefiere: ${text.trim()}`;
+        if (!memoryData.facts.includes(fact)) {
+          memoryData.facts.push(fact);
+        }
+      }
+
+      if (/me gusta|mi favorito|mi favorita|amo el|amo la|soy de|tengo \d+|mi cumpleaños|mi nombre es/i.test(lower)) {
+        const fact = `Dato o preferencia: ${text.trim()}`;
+        if (!memoryData.facts.includes(fact)) {
+          memoryData.facts.push(fact);
+        }
+      }
+    }
+  }
+
   // ── Memory Engine: Detección inteligente de temas ─────────────────
   if (isMemoryEngineAvailable() && memoryData.messages && memoryData.messages.length > 20) {
     try {
@@ -682,6 +706,7 @@ export async function registerGuildLocal(guild) {
   const data = await getCached(docPath, null);
 
   const newData = {
+    id: guild.id,
     name: guild.name,
     icon: guild.iconURL() || null,
     memberCount: guild.memberCount || 0,
@@ -695,6 +720,12 @@ export async function registerGuildLocal(guild) {
   }
 
   setCached(docPath, newData);
+  flushCached(docPath).catch(() => {});
+  if (db) {
+    try {
+      await db.collection('guilds').doc(guild.id).set(newData, { merge: true });
+    } catch {}
+  }
   console.log(`[memory] Servidor registrado/actualizado: ${guild.name} (${guild.id})`);
 
   syncGuildChannels(guild).catch(err => console.error('[memory] Error sincronizando canales:', err));
@@ -884,6 +915,88 @@ export async function findIdentityByName(name, guildUserIds = []) {
   return null;
 }
 
+export async function getAllMemoryForWebPanel() {
+  const serversMap = new Map();
+
+  // 1. Cargar desde archivos JSON singulares de servidor
+  const localServerMemories = getAllServersMemory();
+  for (const sMem of localServerMemories) {
+    const sId = sMem.serverId || 'servidor';
+    const sName = sMem.name || `Servidor ${sId}`;
+    if (!serversMap.has(sId)) {
+      serversMap.set(sId, { serverId: sId, serverName: sName, facts: new Set(), summary: sMem.summary || '' });
+    }
+    const entry = serversMap.get(sId);
+    (sMem.facts || []).forEach(f => entry.facts.add(f));
+    if (sMem.users) {
+      for (const [uId, uData] of Object.entries(sMem.users)) {
+        (uData.facts || []).forEach(f => entry.facts.add(f));
+      }
+    }
+  }
+
+  // 2. Cargar desde Firestore (memoryScopes y user_profiles) si hay conexión
+  if (db) {
+    try {
+      // 2a. memoryScopes
+      const scopesSnap = await db.collection('memoryScopes').get().catch(() => null);
+      if (scopesSnap && !scopesSnap.empty) {
+        for (const scopeDoc of scopesSnap.docs) {
+          const scopeId = scopeDoc.id;
+          const scopeData = scopeDoc.data();
+          const scopeName = scopeData.name || (scopeId === 'global' ? 'Memoria Global' : `Servidor (${scopeId})`);
+
+          if (!serversMap.has(scopeId)) {
+            serversMap.set(scopeId, { serverId: scopeId, serverName: scopeName, facts: new Set(), summary: scopeData.summary || '' });
+          }
+          const entry = serversMap.get(scopeId);
+          (scopeData.facts || []).forEach(f => entry.facts.add(f));
+
+          // Hechos de usuario bajo memoryScopes/{scope}/facts/{userId}
+          const factsSnap = await scopeDoc.ref.collection('facts').get().catch(() => null);
+          if (factsSnap && !factsSnap.empty) {
+            factsSnap.docs.forEach(fDoc => {
+              const fData = fDoc.data();
+              (fData.facts || []).forEach(f => entry.facts.add(f));
+            });
+          }
+        }
+      }
+
+      // 2b. user_profiles
+      const profilesSnap = await db.collection('user_profiles').get().catch(() => null);
+      if (profilesSnap && !profilesSnap.empty) {
+        const key = 'global_profiles';
+        if (!serversMap.has(key)) {
+          serversMap.set(key, { serverId: key, serverName: 'Perfiles Globales de Usuario', facts: new Set(), summary: '' });
+        }
+        const pEntry = serversMap.get(key);
+        profilesSnap.docs.forEach(pDoc => {
+          const pData = pDoc.data();
+          (pData.facts || []).forEach(f => pEntry.facts.add(`[ID ${pDoc.id}] ${f}`));
+        });
+      }
+    } catch (err) {
+      console.warn('[memory/webPanel] Error cargando memoria de Firestore:', err.message);
+    }
+  }
+
+  const result = [];
+  for (const [sId, data] of serversMap.entries()) {
+    const factsArray = Array.from(data.facts);
+    if (factsArray.length > 0 || data.summary) {
+      result.push({
+        serverId: data.serverId,
+        serverName: data.serverName,
+        facts: factsArray,
+        summary: data.summary || ''
+      });
+    }
+  }
+
+  return result;
+}
+
 export default {
   getUserMemory,
   saveUserMemory,
@@ -905,5 +1018,5 @@ export default {
   archivePath,
   isMaliciousLink,
   saveMediaReference,
-  getUserMedia,
+  getAllMemoryForWebPanel,
 };

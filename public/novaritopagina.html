@@ -1344,11 +1344,14 @@
       if (data.servers && data.servers.length > 0) {
         let html = '';
         data.servers.forEach(s => {
-          html += `<strong>[Servidor: ${s.serverName || s.serverId}]</strong>\n`;
+          html += `<strong>[${s.serverName || s.serverId}]</strong>\n`;
           if (s.facts && s.facts.length > 0) {
             s.facts.forEach(f => html += `  • ${f}\n`);
           } else {
             html += `  (Sin memoria almacenada)\n`;
+          }
+          if (s.summary) {
+            html += `  (Resumen: ${s.summary})\n`;
           }
           html += '\n';
         });
@@ -1361,6 +1364,9 @@
       if (viewer) viewer.textContent = '(Memoria limpia / sin registros)';
     }
   }
+
+  // Refrescar automáticamente la memoria cada 10 segundos para ver hechos en vivo
+  setInterval(loadMemoryViewer, 10000);
 
 })();
 </script>

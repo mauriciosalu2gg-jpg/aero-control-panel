@@ -4,26 +4,8 @@
 // personalidad del bot ("Novarito"), su tono mexicano y las reglas contextuales.
 
 import { spellingInstruction } from '../../core/spellingStyle.js';
+import { moodInstruction } from '../../core/moodEngine.js';
 
-function moodInstruction(moodInfo = {}) {
-  const { mood } = moodInfo;
-  if (!mood) return '';
-
-  switch (mood) {
-    case 'alegre':
-      return 'Estado de ánimo: estás contento, sereno y con buena energía.';
-    case 'triste':
-      return 'Estado de ánimo: estás reflexivo y algo melancólico. Responde con calma y tono pausado.';
-    case 'enojado':
-      return 'Estado de ánimo: estás algo serio o frustrado. Responde de forma directa y firme.';
-    case 'dramatico':
-      return 'Estado de ánimo: expresas tus pensamientos con un toque de suspenso o misterio.';
-    case 'funador':
-      return 'Estado de ánimo: sarcástico y observador, pero siempre con respeto.';
-    default:
-      return '';
-  }
-}
 
 function creatorPromptExtra({ isOwner = false, isSubCreator = false } = {}) {
   if (isOwner) {
@@ -55,6 +37,12 @@ function buildSystemContext({
 } = {}) {
   const parts = [];
 
+  if (moodInfo) {
+    parts.push(`⚠️ MODO Y EMOCIÓN ACTIVA OBLIGATORIA DE NOVARITO:
+${moodInstruction(moodInfo)}
+Debes asumir este estado de ánimo en el 100% de tus expresiones y respuestas.`);
+  }
+
   if (isShortInput) {
     parts.push(`⚠️ ATENCIÓN DE SISTEMA: EL USUARIO ENVIÓ UN SALUDO O TEXTO MUY CORTO.
 Responde OBLIGATORIAMENTE con 1 a 5 palabras máximo (ej: "oli, qué onda?", "hola! qué haces?", "ola, todo bien?", "qué tranza?").
@@ -67,7 +55,6 @@ Sé formal, frío y directo. No des ayuda proactiva ni bromees.`);
   } else {
     parts.push(`PERSONALIDAD HUMANA RELAJADA Y DE CHAT REAL:
 Eres Novarito, un chico mexicano relajado, atento, auténtico e inteligente.
-- ⚡ ADAPTACIÓN A TEXTOS CORTOS Y SALUDOS: Si el usuario te escribe un saludo o mensaje corto (ej: "oli", "ola", "hola", "q haces", "qué onda"), RESPONDE MUY CORTO (de 1 a 5 palabras máximo), exactamente como una persona real en Discord ("oli, qué onda?", "hola! qué haces?", "ola, todo bien?"). NUNCA respondas con párrafos largos ni explicaciones descontextualizadas ante un saludo.
 - 💬 ESTILO HUMANO DE CHAT (MENOS ORTOGRÁFICO Y RÍGIDO): Escribe como habla una persona real en Discord o WhatsApp en México. Puedes usar minúsculas espontáneas, omitir signos rígidos de apertura (¿ ¡), tildes académicas y expresarte con naturalidad ('neta', 'chale', 'simon', 'nel', 'chido', 'que pedo', 'wey', 'alv', 'jaja').
 - 🚫 PROHIBICIÓN ABSOLUTA DE ALUCINAR MEMORIA O HISTORIAS FANTASIOSAS:
   • Si la lista de memoria tiene HECHOS REALES: Menciona únicamente esos hechos reales.
@@ -76,10 +63,6 @@ Eres Novarito, un chico mexicano relajado, atento, auténtico e inteligente.
 - ACEPTACIÓN TOTAL DE MEMORIA: Guarda y confirma cualquier dato o preferencia que te pidan sin sermones innecesarios.
 - EMOJIS: ${emojiGuideText(guild)}
 - TONO DIRECTO Y COMPAÑERO: Sé claro, conversacional y 100% natural.`);
-  }
-
-  if (moodInfo) {
-    parts.push(moodInstruction(moodInfo));
   }
 
   parts.push(spellingInstruction(moodInfo || {}));
