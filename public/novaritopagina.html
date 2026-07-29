@@ -621,16 +621,9 @@
       </div>
 
       <div class="field">
-        <label for="in-name">Nombre administrativo</label>
+        <label for="in-name">Usuario administrativo</label>
         <div class="input-wrap" id="wrap-name">
-          <input id="in-name" type="text" autocomplete="off" placeholder="Nombre">
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="in-number">Número administrativo</label>
-        <div class="input-wrap" id="wrap-number">
-          <input id="in-number" type="text" inputmode="numeric" autocomplete="off" placeholder="0000">
+          <input id="in-name" type="text" autocomplete="off" placeholder="Nombre (ej. Lara)">
         </div>
       </div>
 
@@ -989,53 +982,55 @@
     randomizeBlobs(theme);
   }
 
+  const VALID_USER = {
+    name: "Lara",
+    pass: "Mauri2332"
+  };
+
   const loginScreen = document.getElementById("login-screen");
   const welcomeScreen = document.getElementById("welcome-screen");
   const loadingScreen = document.getElementById("loading-screen");
   const appScreen = document.getElementById("app-screen");
 
   const inName = document.getElementById("in-name");
-  const inNumber = document.getElementById("in-number");
   const inPass = document.getElementById("in-pass");
   const wrapName = document.getElementById("wrap-name");
-  const wrapNumber = document.getElementById("wrap-number");
   const wrapPass = document.getElementById("wrap-pass");
   const loginError = document.getElementById("login-error");
   const btnLogin = document.getElementById("btn-login");
 
   function clearErrors(){
-    [wrapName, wrapNumber, wrapPass].forEach(w=>w.classList.remove("error"));
-    loginError.classList.remove("show");
+    [wrapName, wrapPass].forEach(w => w && w.classList.remove("error"));
+    if (loginError) loginError.classList.remove("show");
   }
   function showError(msg, fields){
-    loginError.textContent = msg;
-    loginError.classList.add("show");
-    fields.forEach(w=>w.classList.add("error"));
+    if (loginError) {
+      loginError.textContent = msg;
+      loginError.classList.add("show");
+    }
+    fields.forEach(w => w && w.classList.add("error"));
   }
 
-  btnLogin.addEventListener("click", handleLogin);
-  [inName, inNumber, inPass].forEach(inp=>{
-    inp.addEventListener("keydown", e=>{ if(e.key === "Enter") handleLogin(); });
+  btnLogin?.addEventListener("click", handleLogin);
+  [inName, inPass].forEach(inp => {
+    inp?.addEventListener("keydown", e => { if(e.key === "Enter") handleLogin(); });
   });
 
   function handleLogin(){
     clearErrors();
     const name = inName.value.trim();
-    const number = inNumber.value.trim();
     const pass = inPass.value;
 
-    if(!name || !number || !pass){
-      showError("Completa todos los campos.", [
-        !name ? wrapName : null, !number ? wrapNumber : null, !pass ? wrapPass : null
-      ].filter(Boolean));
+    if(!name || !pass){
+      showError("Ingresa usuario y contraseña.", [!name ? wrapName : null, !pass ? wrapPass : null].filter(Boolean));
       return;
     }
-    if(name !== VALID_USER.name || number !== VALID_USER.number || pass !== VALID_USER.pass){
-      showError("Datos administrativos incorrectos.", [wrapName, wrapNumber, wrapPass]);
+    if(name.toLowerCase() !== VALID_USER.name.toLowerCase() || pass !== VALID_USER.pass){
+      showError("Usuario o contraseña incorrectos.", [wrapName, wrapPass]);
       return;
     }
 
-    inName.blur(); inNumber.blur(); inPass.blur();
+    inName.blur(); inPass.blur();
     btnLogin.classList.add("entering");
     btnLogin.disabled = true;
     loginScreen.style.pointerEvents = "none";
@@ -1215,10 +1210,24 @@
 
     let selectedEmotion = 'alegre';
     document.querySelectorAll('.emo-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         document.querySelectorAll('.emo-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedEmotion = btn.dataset.emo;
+        const guildId = document.getElementById('bot-guild-select')?.value || 'global';
+        try {
+          const res = await fetch('/api/emotion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guildId, emotion: selectedEmotion })
+          });
+          const data = await res.json();
+          const emoStatus = document.getElementById('emo-status');
+          if (emoStatus) {
+            emoStatus.style.display = 'block';
+            emoStatus.textContent = `Emoción del bot cambiada a "${selectedEmotion}" en tiempo real.`;
+          }
+        } catch {}
       });
     });
 
@@ -1231,7 +1240,7 @@
           body: JSON.stringify({ guildId, emotion: selectedEmotion })
         });
         const data = await res.json();
-        alert(data.message || 'Emoción aplicada.');
+        alert(data.message || `Emoción "${selectedEmotion}" aplicada globalmente.`);
       } catch (e) {
         alert('Error al aplicar emoción: ' + e.message);
       }
@@ -1253,6 +1262,7 @@
           statusBox.style.display = 'block';
           statusBox.textContent = data.message || 'Configuración guardada en tiempo real.';
         }
+        loadBackendStatus();
       } catch (e) {
         alert('Error guardando config: ' + e.message);
       }
@@ -1303,9 +1313,9 @@
       }
     });
 
-    document.getElementById("btn-logout").addEventListener("click", ()=>{
+    document.getElementById("btn-logout")?.addEventListener("click", ()=>{
       appScreen.classList.remove("active");
-      inName.value = ""; inNumber.value = ""; inPass.value = "";
+      inName.value = ""; inPass.value = "";
       clearErrors();
       btnLogin.disabled = false;
       btnLogin.classList.remove("entering");
@@ -1319,10 +1329,26 @@
     try {
       const res = await fetch('/api/status');
       const data = await res.json();
-      if (document.getElementById('metric-status')) document.getElementById('metric-status').textContent = data.status || 'Online';
+      if (document.getElementById('metric-status')) document.getElementById('metric-status').textContent = data.status === 'online' ? 'Online' : 'Conectando';
       if (document.getElementById('metric-ping')) document.getElementById('metric-ping').textContent = (data.ping || 0) + ' ms';
       if (document.getElementById('metric-guilds')) document.getElementById('metric-guilds').textContent = `${data.guildsCount || 0} / ${data.usersCount || 0}`;
       if (document.getElementById('metric-tokens')) document.getElementById('metric-tokens').textContent = (data.tokenUsage || 0).toLocaleString();
+
+      if (data.activeProviders && data.activeProviders.length > 0) {
+        const pSelect = document.getElementById('cfg-provider');
+        if (pSelect && pSelect.options.length <= 7) {
+          pSelect.innerHTML = '<option value="auto" style="background:#111;">Auto (Rotación Dinámica)</option>';
+          const allProviders = ['groq', 'gemini', 'openai', 'anthropic', 'openrouter', 'cerebras', 'huggingface', 'mistral', 'cohere'];
+          allProviders.forEach(p => {
+            const isConfigured = data.activeProviders.includes(p);
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = p.toUpperCase() + (isConfigured ? ' (Activo ✅)' : ' (Sin API Key)');
+            opt.style.background = '#111';
+            pSelect.appendChild(opt);
+          });
+        }
+      }
     } catch {}
   }
 

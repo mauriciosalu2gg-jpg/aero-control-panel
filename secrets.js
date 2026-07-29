@@ -73,10 +73,27 @@ function getMemoryConfig() {
   return SECRETS.memory;
 }
 
+function setPrimaryProvider(providerName, modelName, apiKey) {
+  if (!providerName) return;
+  const pName = providerName.toLowerCase();
+  if (!SECRETS.providers[pName]) {
+    SECRETS.providers[pName] = { apiKey: '' };
+  }
+  if (apiKey) {
+    SECRETS.providers[pName].apiKey = apiKey;
+  }
+  const idx = PROVIDER_PRIORITY.indexOf(pName);
+  if (idx !== -1) {
+    PROVIDER_PRIORITY.splice(idx, 1);
+  }
+  PROVIDER_PRIORITY.unshift(pName);
+}
+
 export default {
   getAvailableProviders,
   getActiveProvider,
   getDiscordToken,
   getMemoryConfig,
+  setPrimaryProvider,
   PROVIDER_PRIORITY,
 };

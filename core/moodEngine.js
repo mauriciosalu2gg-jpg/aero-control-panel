@@ -35,16 +35,19 @@ function countHits(lower, words) {
  * @param {string} mood 
  */
 export function setManualMood(guildId, mood) {
-  if (!guildId) return;
+  const target = guildId || 'global';
   if (!mood || mood === 'auto' || mood === 'reset') {
-    manualMoodOverrides.delete(guildId);
+    manualMoodOverrides.delete(target);
+    manualMoodOverrides.delete('global');
   } else {
-    manualMoodOverrides.set(guildId, mood.toLowerCase());
+    const cleanMood = mood.toLowerCase();
+    manualMoodOverrides.set(target, cleanMood);
+    manualMoodOverrides.set('global', cleanMood);
   }
 }
 
 export function getManualMood(guildId) {
-  return manualMoodOverrides.get(guildId) || null;
+  return manualMoodOverrides.get(guildId || 'global') || manualMoodOverrides.get('global') || null;
 }
 
 /**
@@ -52,8 +55,8 @@ export function getManualMood(guildId) {
  */
 export function detectMood({ content = '', guildId = null, userPoints = 0 }) {
   // 1. Sobreescritura manual desde el panel web / comando
-  if (guildId && manualMoodOverrides.has(guildId)) {
-    const manual = manualMoodOverrides.get(guildId);
+  const manual = getManualMood(guildId);
+  if (manual) {
     return { mood: manual, intensity: 3, source: 'manual' };
   }
 
