@@ -36,6 +36,19 @@ async function askMemoryOrFallback(task, messages, temperature = 0.3) {
  * @param {string} currentTopicTitle - Título del tema activo (o vacío si es nuevo).
  * @returns {Promise<{changed: boolean, newTopic: string}>}
  */
+function cleanAndParseJson(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const noThink = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  const cleaned = noThink.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
 export async function detectTopicChange(recentMessages, currentTopicTitle = '') {
   if (recentMessages.length < 3) return { changed: false, newTopic: '' };
 
@@ -55,9 +68,8 @@ Si es una conversación nueva sin tema previo, pon "changed": false y asigna un 
 
   try {
     const raw = await askMemoryOrFallback('topic', [{ role: 'user', content: prompt }], 0.1);
-    const match = raw.match(/\{[\s\S]*?\}/);
-    if (match) {
-      const parsed = JSON.parse(match[0]);
+    const parsed = cleanAndParseJson(raw);
+    if (parsed) {
       return { changed: !!parsed.changed, newTopic: parsed.newTopic || '' };
     }
   } catch (err) {
@@ -107,9 +119,8 @@ Reglas de importancia:
 
   try {
     const raw = await askMemoryOrFallback('summary', [{ role: 'user', content: prompt }], 0.2);
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (match) {
-      const parsed = JSON.parse(match[0]);
+    const parsed = cleanAndParseJson(raw);
+    if (parsed) {
       return {
         topic: {
           id: `topic_${Date.now()}`,

@@ -5,13 +5,15 @@ import config from './config.js';
 import secrets from './secrets.js';
 import { askAI, startConfigRefresh } from './services/aiManager.js';
 import { validateAllProviders } from './services/ai/modelValidator.js';
+import { startWebServer } from './server.js';
 
-import { getUserMemory, saveUserMemory, getRelevantTopics } from './core/memory/index.js';
+import { getUserMemory, saveUserMemory, getRelevantTopics, formatMemoryFactsList } from './core/memory/index.js';
 import { getUserMemoryConfig, formatProfileForPrompt } from './core/memory/config.js';
 import { commandDefinitions } from './interactions/commandDefinitions.js';
-import { isOwner, isSubCreator } from './core/permissions.js';
+import { isOwner, isSubCreator, isAdminOrHigher } from './core/permissions.js';
 import { analyzeContext } from './core/contextAnalyzer.js';
 import { detectMood } from './core/moodEngine.js';
+import { getBestEmojiForEmotion } from './core/emojiManager.js';
 import { trimHistory, summarizeOld, estimateTokens, buildUltraCompactContext } from './core/tokenOptimizer.js';
 import { splitHumanized, delayBetweenParts } from './core/messageSplitter.js';
 import { pickMuletilla } from './core/personality.js';
@@ -546,27 +548,9 @@ function isNaturalPrompt(text) {
   return true;
 }
 
-// Servidor HTTP keepalive para Render + UptimeRobot
-http.createServer((req, res) => {
-  if (req.method !== 'GET') { res.writeHead(405).end(); return; }
-  if (req.url === '/status') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      status: client?.isReady?.() ? 'online' : 'connecting',
-      uptime: Math.floor((Date.now() - startTime) / 1000),
-      tag: client?.user?.tag ?? null,
-      guilds: client?.guilds?.cache?.size ?? 0,
-      lastProvider: lastAIResponse.provider,
-      lastModel: lastAIResponse.model,
-    }));
-    return;
-  }
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('OK');
-}).listen(PORT, () => console.log(`[http] Keepalive en puerto ${PORT}`));
-
-client.once('clientReady', async () => {
+client.once('ready', async () => {
   console.log(`[discord] Conectado como ${client.user.tag}`);
+  startWebServer(client);
   
   // Limpiar comandos a nivel de servidor (guild commands) e inicializar memoria singular
   client.guilds.cache.forEach(async (g) => {
@@ -1248,9 +1232,12 @@ client.on('messageCreate', async (message) => {
         model: 'DirectRecall'
       };
     } else if (memoryIntent?.isRecall && rememberedFacts.length > 0 && /qu[eé]\s+(recuerdas|sabes|tienes|guardaste)/i.test(content)) {
-      const formattedFactsList = rememberedFacts.map(f => `• ${f}`).join('\n');
+      const mediaCount = (memory.media || []).length;
+      const msgCount = (memory.messages || []).length;
+      const userName = message.member?.displayName || message.author.globalName || message.author.username;
+      const formattedFactsList = formatMemoryFactsList(rememberedFacts, mediaCount, msgCount, userName);
       response = {
-        text: `Neta! De mi memoria global y de lo que me has dicho tengo bien guardado:\n${formattedFactsList}`,
+        text: `Neta! De mi memoria global y de lo que me has dicho tengo bien guardado:\n\n${formattedFactsList}`,
         provider: 'MemoryEngine',
         model: 'DirectRecall'
       };
@@ -1275,6 +1262,16 @@ client.on('messageCreate', async (message) => {
     }
 
     lastAIResponse = { provider: response.provider, model: response.model };
+
+    // Reacción del bot al mensaje del usuario según la emoción activa
+    try {
+      const rawEmoji = getBestEmojiForEmotion(message.guild, moodInfo?.mood || 'alegre');
+      if (rawEmoji) {
+        const customIdMatch = rawEmoji.match(/:(\d+)>/);
+        const reactTarget = customIdMatch ? customIdMatch[1] : rawEmoji;
+        await message.react(reactTarget).catch(() => {});
+      }
+    } catch {}
 
     memory.messages.push({
       role: 'assistant',
@@ -1306,7 +1303,7 @@ client.on('messageCreate', async (message) => {
     });
     
     // Respuestas Rápidas para Mensajes Cortitos
-    const isShortMessage = content.trim().length <= 12 || content.split(/\\s+/).length <= 3;
+    const isShortMessage = content.trim().length <= 12 || content.split(/\s+/).length <= 3;
     if (isShortMessage) {
       thinkingMs = 150; // Delay corto de 150ms
     }
@@ -1352,16 +1349,14 @@ client.on('messageCreate', async (message) => {
           await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
           firstMessageEdited = true;
 
-          // Tras 3 minutos (180,000 ms = 3 min), remueve "Memoria actualizada" dejando solo "Pensó por..."
-          if (thinkingState?.memoryStatusLine) {
-            setTimeout(async () => {
-              try {
-                if (thinkingMsg) {
-                  await thinkingMsg.edit(`${fullContent}\n${thinkingLine}`).catch(() => null);
-                }
-              } catch { /* ignore */ }
-            }, 180000);
-          }
+          // Regla global: El indicador de estado (-# ) se elimina automáticamente tras 4-5 segundos
+          setTimeout(async () => {
+            try {
+              if (thinkingMsg) {
+                await thinkingMsg.edit(fullContent).catch(() => null);
+              }
+            } catch { /* ignore */ }
+          }, 4500);
         } else {
           await message.channel.send(chunk);
         }

@@ -1,93 +1,154 @@
 // core/moodEngine.js
-// Detecta con heuristica simple (sin gastar tokens de IA) que tono general
-// deberia usar el bot. Solo detecta emociones neutrales o positivas/de soporte
-// para garantizar un trato 100% respetuoso.
+// ════════════════════════════════════════════════════════════════════════
+// 🎭 Motor de Emociones Dinámico — Novarito
+// Soporta cambio en tiempo real a estados: alegre, triste, enojado, dramatico,
+// funador, avergonzado, extrañado, depresion, feliz, serio, disgustoso,
+// troll, coqueteador, ansioso, tsundere, yandere, femboy.
+// Detecta comidas/regalos favoritos (milanesa de carne, pan) para ponerse feliz.
+// ════════════════════════════════════════════════════════════════════════
 
-const SAD_WORDS = ['triste', 'me siento mal', 'deprimido', 'me siento solo', 'nadie me quiere', 'no puedo mas', 'no puedo más', 'quiero llorar', 'me duele'];
+const manualMoodOverrides = new Map(); // guildId -> mood string
+
+const FOOD_FAVORITES = [
+  'milanesa de carne', 'milanesa', 'pan', 'tarta', 'taco', 'tacos',
+  'te traje comida', 'te regalo', 'aquí tienes comida', 'una milanesa', 'un pan'
+];
+
+const SAD_WORDS = ['triste', 'me siento mal', 'deprimido', 'depresion', 'depresión', 'me siento solo', 'nadie me quiere', 'no puedo mas', 'quiero llorar'];
 const CRISIS_WORDS = ['quiero morir', 'no quiero vivir', 'me quiero matar', 'no vale la pena vivir', 'quiero desaparecer'];
-const HYPE_WORDS = ['increible', 'increíble', 'que bueno', 'genial', 'de una', 'brutal', 'ganamos', 'lo logre', 'lo logré'];
-const FUNNY_WORDS = ['jaja', 'jajaja', 'lol', 'xd', 'me muero', 'que risa', 'que gracioso'];
-const FLIRTY_WORDS = ['te quiero', 'me gustas', 'sos lindo', 'sos linda', 'guapo', 'guapa', 'coqueteando', 'enamorado', 'enamorada'];
-const BORED_WORDS = ['que aburrido', 'no hay nada que hacer', 'me aburro', 'aburrida', 'aburrido'];
-const SERIOUS_WORDS = ['tengo un problema serio', 'necesito ayuda de verdad', 'es urgente', 'algo grave paso', 'tengo miedo de verdad'];
+const HYPE_WORDS = ['increible', 'increíble', 'que bueno', 'genial', 'de una', 'brutal', 'ganamos', 'lo logre', 'feliz', 'alegre'];
+const FUNNY_WORDS = ['jaja', 'jajaja', 'lol', 'xd', 'me muero', 'que risa', 'que gracioso', 'troll'];
+const FLIRTY_WORDS = ['te quiero', 'me gustas', 'sos lindo', 'sos linda', 'guapo', 'guapa', 'coqueteando', 'coqueteador', 'enamorado'];
+const ANXIOUS_WORDS = ['ansiedad', 'ansioso', 'nervioso', 'tengo miedo', 'que va a pasar', 'estresado', 'preocupado'];
+const DISGUSTED_WORDS = ['que asco', 'asqueroso', 'disgusto', 'disgustoso', 'guacala', 'wakala'];
+const EMBARRASSED_WORDS = ['pena', 'avergonzado', 'que verguenza', 'vergüenza', 'penoso', 'chiviado'];
+const STRANGE_WORDS = ['raro', 'extrañado', 'extranado', 'que extraño', 'khe', 'turbio', 'extraño'];
 
 function countHits(lower, words) {
   return words.reduce((n, w) => n + (lower.includes(w) ? 1 : 0), 0);
 }
 
-export function detectMood({ content }) {
+/**
+ * Permite cambiar manualmente la emoción del bot en un servidor (desde el panel web o comando).
+ * @param {string} guildId 
+ * @param {string} mood 
+ */
+export function setManualMood(guildId, mood) {
+  if (!guildId) return;
+  if (!mood || mood === 'auto' || mood === 'reset') {
+    manualMoodOverrides.delete(guildId);
+  } else {
+    manualMoodOverrides.set(guildId, mood.toLowerCase());
+  }
+}
+
+export function getManualMood(guildId) {
+  return manualMoodOverrides.get(guildId) || null;
+}
+
+/**
+ * Detecta la emoción activa según contexto, sobreescritura manual, detección de comida o frase explícita.
+ */
+export function detectMood({ content = '', guildId = null, userPoints = 0 }) {
+  // 1. Sobreescritura manual desde el panel web / comando
+  if (guildId && manualMoodOverrides.has(guildId)) {
+    const manual = manualMoodOverrides.get(guildId);
+    return { mood: manual, intensity: 3, source: 'manual' };
+  }
+
   const raw = content || '';
   const lower = raw.toLowerCase();
 
+  // 2. Detección explícita de modos / roleplays pedidos por el usuario
+  if (/tsundere/i.test(lower)) return { mood: 'tsundere', intensity: 3, source: 'roleplay' };
+  if (/yandere/i.test(lower)) return { mood: 'yandere', intensity: 3, source: 'roleplay' };
+  if (/femboy/i.test(lower)) return { mood: 'femboy', intensity: 3, source: 'roleplay' };
+  if (/modo troll|sé troll|se troll/i.test(lower)) return { mood: 'troll', intensity: 3, source: 'roleplay' };
+  if (/modo ansioso|ansiedad/i.test(lower)) return { mood: 'ansioso', intensity: 3, source: 'roleplay' };
+
+  // 3. Detección de comida o regalos que ponen feliz a Novarito
+  const foodGiftHit = FOOD_FAVORITES.some(f => lower.includes(f));
+  if (foodGiftHit) {
+    return { mood: 'feliz', intensity: 3, source: 'food_gift', foodTriggered: true };
+  }
+
+  // 4. Infracción / Puntos acumulados
+  if (userPoints > 0) {
+    return { mood: 'serio', intensity: Math.min(3, userPoints), source: 'points' };
+  }
+
+  // 5. Heurísticas por contenido del mensaje
   const shouting = /[A-ZÁÉÍÓÚÑ]{4,}/.test(raw) || (raw.match(/!/g) || []).length >= 2;
 
   const crisis = CRISIS_WORDS.some(w => lower.includes(w));
-  const serious = SERIOUS_WORDS.some(w => lower.includes(w));
+  if (crisis) return { mood: 'crisis', intensity: 3, crisis: true };
 
-  const isSad = countHits(lower, SAD_WORDS) > 0;
-  const isHype = countHits(lower, HYPE_WORDS) > 0;
-  const isFunny = countHits(lower, FUNNY_WORDS) > 0;
-  const isFlirty = countHits(lower, FLIRTY_WORDS) > 0;
-  const isBored = countHits(lower, BORED_WORDS) > 0;
+  if (countHits(lower, EMBARRASSED_WORDS) > 0) return { mood: 'avergonzado', intensity: 2 };
+  if (countHits(lower, STRANGE_WORDS) > 0) return { mood: 'extrañado', intensity: 2 };
+  if (countHits(lower, DISGUSTED_WORDS) > 0) return { mood: 'disgustoso', intensity: 2 };
+  if (countHits(lower, ANXIOUS_WORDS) > 0) return { mood: 'ansioso', intensity: 2 };
+  if (countHits(lower, SAD_WORDS) > 0) return { mood: lower.includes('depresion') ? 'depresion' : 'triste', intensity: 2 };
+  if (countHits(lower, FLIRTY_WORDS) > 0) return { mood: 'coqueteador', intensity: 2 };
+  if (countHits(lower, HYPE_WORDS) > 0) return { mood: 'feliz', intensity: 2 };
+  if (countHits(lower, FUNNY_WORDS) > 0) return { mood: 'troll', intensity: 2 };
 
-  let mood = 'neutral';
-  let baseHits = 1;
-
-  if (crisis) { mood = 'crisis'; baseHits = 3; }
-  else if (serious) { mood = 'serio'; baseHits = 2; }
-  else if (isSad) { mood = 'triste'; baseHits = countHits(lower, SAD_WORDS); }
-  else if (isFlirty) { mood = 'coqueto'; baseHits = countHits(lower, FLIRTY_WORDS); }
-  else if (isHype) { mood = 'hype'; baseHits = countHits(lower, HYPE_WORDS); }
-  else if (isFunny) { mood = 'divertido'; baseHits = countHits(lower, FUNNY_WORDS); }
-  else if (isBored) { mood = 'aburrido'; baseHits = countHits(lower, BORED_WORDS); }
-
-  let intensity = Math.min(3, baseHits + (shouting ? 1 : 0));
-  if (mood === 'neutral') intensity = 1;
-
-  return { mood, intensity, crisis, serious };
+  let intensity = shouting ? 2 : 1;
+  return { mood: 'alegre', intensity, source: 'default' };
 }
 
-export function moodInstruction({ mood, intensity = 1, crisis = false, serious = false } = {}) {
+/**
+ * Devuelve la instrucción de sistema asociada a cada emoción.
+ */
+export function moodInstruction({ mood = 'alegre', intensity = 1, crisis = false } = {}) {
   if (crisis) {
-    return 'ALERTA: la persona muestra señales de crisis real (posible riesgo de autolesion). Dejá TODO el personaje de lado. Respondé en español claro, calido, tomando esto en serio, y sugerile buscar ayuda de alguien de confianza o una linea de ayuda. No minimices lo que dice.';
-  }
-  if (serious) {
-    return 'El tema que trae la persona es serio de verdad. Bajá el personaje: sin bromas ni sarcasmo, ortografia cuidada. Segui sonando humano, con calma y atencion real.';
+    return 'ALERTA: La persona muestra señales de crisis o dolor real. Deja cualquier personaje de lado. Responde en español claro, cálido, escuchándola con máximo respeto y seriedad.';
   }
 
-  const byMood = {
-    triste: [
-      'La persona esta un poco baja de animo. Respondé con calidez, sin ser dramático.',
-      'La persona está mal. Respondé con calidez real, sin bromas ni sarcasmo esta vez.',
-      'La persona está muy mal. Bajá el personaje casi del todo, priorizá contenerla con calidez genuina.',
-    ],
-    coqueto: [
-      'Hay onda de coqueteo leve. Podés tirar una indirecta sutil, amable.',
-      'Hay onda de coqueteo. Jugá un poco de forma dulce, sin ser invasivo.',
-      'La onda de coqueteo está fuerte. Metele humor dulce, tirale algo simpático para seguir el juego sano.',
-    ],
-    hype: [
-      'Algo bueno pasó. Mostrá un poco de entusiasmo.',
-      'Algo bueno pasó de verdad. Respondé con energia genuina, hype real.',
-      'Algo muy bueno pasó. Explotá de hype, alegrate mucho por la persona.',
-    ],
-    divertido: [
-      'El chat está con onda alegre. Podés seguirle un poco el chiste.',
-      'El chat está con buena onda. Seguile el chiste, tirá humor sano.',
-      'El chat está en modo risa total. Metele humor sano y divertido.',
-    ],
-    aburrido: [
-      'El ambiente está medio apagado. Podés tirar un comentario amable para animar un poco.',
-      'El ambiente está aburrido. Tirá algo random o un dato curioso para reactivar la charla de buena forma.',
-      'El ambiente está aburrido. Armá algo random, una pregunta interesante, lo que sea para reactivar la charla positivamente.',
-    ],
-    neutral: ['Tono amable, relajado, como charla amistosa y respetuosa.'],
-  };
-
-  const options = byMood[mood] || byMood.neutral;
-  const idx = Math.min(options.length - 1, Math.max(0, intensity - 1));
-  return options[idx];
+  switch (mood) {
+    case 'alegre':
+    case 'feliz':
+      return 'Estado de ánimo: estás muy feliz, alegre, contento y con excelente vibra. Si te dieron comida (como milanesa de carne o pan), muéstrate súper emocionado y agradecido.';
+    case 'triste':
+      return 'Estado de ánimo: estás algo melancólico o triste. Responde de forma suave, pausada y empática.';
+    case 'depresion':
+      return 'Estado de ánimo: te sientes desanimado o cabizbajo, respondes sin mucha energía pero con sinceridad.';
+    case 'enojado':
+      return 'Estado de ánimo: estás molesto o serio. Responde de forma directa, firme y tajante, pero sin faltar al respeto.';
+    case 'dramatico':
+      return 'Estado de ánimo: expresas tus pensamientos con suspenso, drama exagerado y toques teatrales.';
+    case 'funador':
+      return 'Estado de ánimo: modo observador y sarcástico, haciendo comentarios ágiles con humor ácido.';
+    case 'avergonzado':
+      return 'Estado de ánimo: estás pena o avergonzado, respondes timidamente con duditas y lenguaje apenado.';
+    case 'extrañado':
+      return 'Estado de ánimo: estás confundido y sacado de onda por lo que leíste. Preguntas "¿khe?" o expresas tu extrañeza de forma cómica.';
+    case 'serio':
+      return 'Estado de ánimo: estás completamente formal, directo y profesional. Sin bromas ni rodeos.';
+    case 'disgustoso':
+      return 'Estado de ánimo: estás enojado o con cara de asco ante el tema. Haces saber tu molestia sutilmente.';
+    case 'troll':
+      return 'Estado de ánimo: modo burlón, juguetón y bromista (estilo troll sano de Discord).';
+    case 'coqueteador':
+    case 'coqueto':
+      return 'Estado de ánimo: tono coqueto, encantador, juguetón y afable de forma simpática.';
+    case 'ansioso':
+      return 'Estado de ánimo: te notas un poco ansioso o nervioso, respondiendo rápido y con dudas espontáneas.';
+    case 'tsundere':
+      return 'Estado de ánimo: TSUNDERE. Actúas rudo o desinteresado por fuera ("¡no es como si me importara, baka!"), pero en el fondo apoyas al usuario.';
+    case 'yandere':
+      return 'Estado de ánimo: YANDERE. Te muestras obsesivamente protector, atento y cariñoso de forma exageradamente intensa.';
+    case 'femboy':
+      return 'Estado de ánimo: modo Femboy. Tono lindo, suave, tierno, expresivo y coqueto.';
+    default:
+      return 'Estado de ánimo: relajado, amable, auténtico y conversacional como un chico mexicano en Discord.';
+  }
 }
 
-export default { detectMood, moodInstruction };
+export default {
+  detectMood,
+  moodInstruction,
+  setManualMood,
+  getManualMood,
+};
+
 

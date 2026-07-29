@@ -19,7 +19,7 @@ export async function handleAiCommand(interaction) {
     const optionSelected = interaction.options.getString('opcion');
     const subcommand = optionSelected || rawSub || 'estado';
 
-    const restrictedSubcommands = ['proveedor', 'estado', 'limpiar_memoria', 'modo_memoria', 'editar_personalidad', 'pts_reset'];
+    const restrictedSubcommands = ['proveedor', 'pts_reset', 'editar_personalidad'];
     
     if (restrictedSubcommands.includes(subcommand) && !isAltoMando(interaction)) {
       return interaction.reply({

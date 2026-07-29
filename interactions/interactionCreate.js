@@ -1,4 +1,3 @@
-import { isAdminOrHigher, isCreatorOrSubCreator } from '../core/permissions.js';
 import { handleAiCommand } from './handlers/aiHandler.js';
 import { handleModerationCommand } from './handlers/moderationHandler.js';
 
@@ -6,15 +5,6 @@ export async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand()) return;
 
   const cmd = interaction.commandName;
-
-  const isAllowed = isCreatorOrSubCreator(interaction.user) || isAdminOrHigher(interaction.user) || interaction.member?.permissions?.has?.('Administrator');
-  if (!isAllowed) {
-    await interaction.reply({
-      content: '❌ Este comando solo lo pueden usar administradores del servidor o del bot.',
-      ephemeral: true,
-    });
-    return;
-  }
 
   try {
     if (cmd === 'ai') {

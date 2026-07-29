@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { PermissionsBitField, ChannelType } from 'discord.js';
 import { db } from '../../database/firebase.js';
+import { getAllServersMemory, readServerMemory, saveServerMemory } from './serverMemoryManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOCAL_FALLBACK_DIR = path.join(__dirname, '..', '..', 'data', 'stats');
@@ -398,8 +399,6 @@ export async function getRelevantTopics(userId, query, topN = 5) {
   }
 }
 
-import { getAllServersMemory, readServerMemory, saveServerMemory } from './serverMemoryManager.js';
-
 export async function getAllUserServerMemories(userId) {
   const localServerMemories = getAllServersMemory();
   const aggregated = [];
@@ -458,8 +457,45 @@ export async function getAllUserServerMemories(userId) {
   }
 }
 
+
 export async function resetUserMemory(userId, guildId, mode, channelId) {
   return await purgeUserMemory(userId, guildId, mode, channelId);
+}
+
+/**
+ * Purga ABSOLUTA de toda la memoria global, perfiles, temas, medios y archivos del bot.
+ */
+export async function purgeEntireGlobalMemory() {
+  try {
+    const dataDir = path.join(__dirname, '..', '..', 'data');
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir);
+      for (const f of files) {
+        if (f.endsWith('.json') || f.endsWith('.sqlite')) {
+          try { fs.unlinkSync(path.join(dataDir, f)); } catch {}
+        }
+      }
+    }
+
+    if (db) {
+      const collections = ['memoryScopes', 'user_profiles', 'user_topics', 'user_topic_state', 'user_media', 'memory_archive', 'user_identities', 'file_consent'];
+      for (const col of collections) {
+        try {
+          const snap = await db.collection(col).get().catch(() => null);
+          if (snap && !snap.empty) {
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit().catch(() => {});
+          }
+        } catch {}
+      }
+    }
+    console.log('[memory] MEMORIA PURGADA HASTA QUE NO QUEDA NADA.');
+    return { success: true };
+  } catch (err) {
+    console.error('[memory] Error purgando memoria global:', err.message);
+    return { success: false, error: err.message };
+  }
 }
 
 export async function purgeUserMemory(userId, guildId, mode, channelId, targetServerArg = null) {
@@ -536,6 +572,81 @@ export async function purgeUserMemory(userId, guildId, mode, channelId, targetSe
 
   return { purged: true, targetScope };
 }
+
+// ── Formateo de Hechos con Caracteres / Emojis de Memoria ──────────────
+// Personas: carácter/emoji especial de memoria (<:hojita:...> o similar)
+// Novarito mismo (sus gustos): puntito estilo ChatGPT (•)
+
+export function formatMemoryFactsList(facts = [], mediaCount = 0, msgCount = 0, userName = 'Usuario') {
+  if (!facts) facts = [];
+  const memoryEmoji = '<:hojita:1527960400975630436>';
+
+  const seen = new Set();
+  const personFacts = [];
+  const botFacts = [];
+
+  for (const fact of facts) {
+    const str = String(fact).trim();
+    if (!str) continue;
+    const lower = str.toLowerCase();
+
+    // Deduplicación estricta
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+
+    // Hechos sobre Novarito mismo (ej. "Te gusta la milanesa", "te gusta el pan", "eres femboy")
+    const isBotFact = /^(te|eres|le|el bot|novarito)\b/i.test(str) || /milanesa|pan|femboy/i.test(str) && !/le0_|lara|sam|user/i.test(str);
+
+    if (isBotFact) {
+      botFacts.push(`• ${str}`);
+    } else {
+      personFacts.push(`${memoryEmoji} ${str}`);
+    }
+  }
+
+  const totalSaved = personFacts.length + botFacts.length + mediaCount + msgCount;
+
+  const header = `${memoryEmoji} **${userName}** — ${totalSaved} cosas guardadas (total)\n` +
+    `• Archivos guardados: ${mediaCount}\n` +
+    `• Mensajes guardados: ${msgCount}\n` +
+    `• Hechos y preferencias guardadas: ${personFacts.length + botFacts.length}\n`;
+
+  const itemsList = [...personFacts, ...botFacts].join('\n');
+  return `${header}\n${itemsList}`.trim();
+}
+
+// ── Sistema de Consentimiento de Archivos ──────────────────────────────
+
+function consentPath(userId) {
+  return `file_consent/${userId}`;
+}
+
+export async function saveFileConsent(ownerUserId, allowedUserIds = []) {
+  if (!ownerUserId) return;
+  try {
+    const cPath = consentPath(ownerUserId);
+    const existing = await getCached(cPath, { allowed: [] });
+    const merged = [...new Set([...(existing.allowed || []), ...allowedUserIds])];
+    setCached(cPath, { allowed: merged, updatedAt: new Date().toISOString() });
+    await flushCached(cPath);
+    return merged;
+  } catch (err) {
+    console.error('[consent] Error guardando consentimiento:', err.message);
+  }
+}
+
+export async function checkFileConsent(ownerUserId, requestingUserId) {
+  if (!ownerUserId || !requestingUserId) return false;
+  if (ownerUserId === requestingUserId) return true; // El dueño siempre tiene permiso
+  try {
+    const cPath = consentPath(ownerUserId);
+    const doc = await getCached(cPath, { allowed: [] });
+    return (doc.allowed || []).includes(requestingUserId);
+  } catch {
+    return false;
+  }
+}
+
 
 // ── Estadisticas y Tokens ───────────────────────────────────────────────
 
@@ -776,6 +887,11 @@ export default {
   getUserMemory,
   saveUserMemory,
   resetUserMemory,
+  purgeEntireGlobalMemory,
+  purgeUserMemory,
+  formatMemoryFactsList,
+  saveFileConsent,
+  checkFileConsent,
   getRelevantTopics,
   getGuildTokenUsage,
   getGlobalTokenUsage,
