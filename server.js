@@ -276,20 +276,6 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
       res.status(500).json({ error: err.message });
     }
   });
-      if (!emotion) return res.status(400).json({ error: 'Falta emoción' });
-
-      setManualMood(guildId || 'global', emotion);
-
-      res.json({
-        success: true,
-        guildId: guildId || 'global',
-        activeEmotion: emotion,
-        message: `Emoción del bot actualizada a **${emotion}** en tiempo real.`,
-      });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
 
   // 7. Ver lista completa de memoria en formato resumido estilo Claude
   app.get('/api/memory', async (req, res) => {
