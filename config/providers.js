@@ -5,7 +5,6 @@
 export const STATS_WINDOW_SIZE = 10;
 
 export const PROVIDER_PRIORITY = [
-  'groq',
   'gemini',
   'openrouter',
   'openai',

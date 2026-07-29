@@ -13,7 +13,6 @@ const SECRETS = {
 
   providers: {
     gemini: { apiKey: process.env.GEMINI_API_KEY || '' },
-    groq: { apiKey: process.env.GROQ_API_KEY || '' },
     openai: { apiKey: process.env.OPENAI_API_KEY || '' },
     anthropic: { apiKey: process.env.ANTHROPIC_API_KEY || '' },
     cerebras: { apiKey: process.env.CEREBRAS_API_KEY || '' },
@@ -26,13 +25,11 @@ const SECRETS = {
   memory: {
     enabled: process.env.MEMORY_ENABLED === 'true',
     provider: process.env.MEMORY_PROVIDER || 'router',
-    groqKey1: process.env.MEMORY_GROQ_KEY_1 || '',
-    groqKey2: process.env.MEMORY_GROQ_KEY_2 || '',
     geminiKey: process.env.MEMORY_GEMINI_KEY || '',
     ollamaUrl: process.env.MEMORY_OLLAMA_URL || 'http://localhost:11434',
     openrouterKey: process.env.MEMORY_OPENROUTER_KEY || '',
-    topicModel: process.env.MEMORY_TOPIC_MODEL || 'llama-3.1-8b-instant',
-    summaryModel: process.env.MEMORY_SUMMARY_MODEL || 'llama-3.3-70b-versatile',
+    topicModel: process.env.MEMORY_TOPIC_MODEL || 'gemini-2.0-flash',
+    summaryModel: process.env.MEMORY_SUMMARY_MODEL || 'gemini-1.5-pro',
     profileModel: process.env.MEMORY_PROFILE_MODEL || 'gemma2-9b-it',
   },
 };
