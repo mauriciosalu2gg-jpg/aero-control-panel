@@ -322,11 +322,7 @@ async function runExplicitMemoryUi(message, content, mode, details = '', thinkin
   // ── MODO COMPACTO (cuando no es verboseSteps) ──
   if (!verboseSteps) {
     try {
-      let createdNew = false;
-      if (!memoryMsg) {
-        memoryMsg = await message.channel.send(`-# ${EMOJIS.memory} *Managing memory...*`).catch(() => null);
-        createdNew = true;
-      }
+      if (!memoryMsg) return;
 
       if (memoryMsg) {
         let dot = 0;
@@ -340,25 +336,6 @@ async function runExplicitMemoryUi(message, content, mode, details = '', thinkin
 
         const statusLine = `-# ${EMOJIS.done} *${finalLabel}*`;
         if (thinkingState) thinkingState.memoryStatusLine = statusLine;
-
-        if (thinkingState?.aiResponseText) {
-          const elapsedMs = Date.now() - (thinkingState.startTime || Date.now());
-          const thinkingTimeStr = formatThinkingTime(elapsedMs);
-          const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTimeStr}*`;
-          const combinedFooter = `${thinkingLine}\n${statusLine}`;
-          await memoryMsg.edit(`${thinkingState.aiResponseText}\n${combinedFooter}`).catch(() => null);
-
-          // Tras 3 minutos (180,000 ms = 3 min), remueve "Memoria actualizada" dejando solo "Pensó por..."
-          setTimeout(async () => {
-            try {
-              if (thinkingState?.aiResponseText) {
-                await memoryMsg.edit(`${thinkingState.aiResponseText}\n${thinkingLine}`).catch(() => null);
-              }
-            } catch { /* ignore */ }
-          }, 180000);
-        } else {
-          await memoryMsg.edit(statusLine).catch(() => null);
-        }
       }
     } catch (err) {
       console.warn('[memory-ui] Error en modo compacto:', err.message);
@@ -372,12 +349,6 @@ async function runExplicitMemoryUi(message, content, mode, details = '', thinkin
   const bullet = bulletStyle === 'arrows' ? '↳' : bulletStyle === 'stars' ? '✧' : '❥';
 
   try {
-    let createdNew = false;
-    if (!memoryMsg) {
-      memoryMsg = await message.channel.send(`-# ${EMOJIS.memory} *Managing memory...*`).catch(() => null);
-      createdNew = true;
-    }
-
     if (!memoryMsg) return;
 
     // Cambiar inmediatamente la burbuja de "Pensando..." a "Managing memory..." en el primer cuadro
@@ -1262,15 +1233,18 @@ client.on('messageCreate', async (message) => {
 
     lastAIResponse = { provider: response.provider, model: response.model };
 
-    // Reacción del bot al mensaje del usuario según la emoción activa
-    try {
-      const rawEmoji = getBestEmojiForEmotion(message.guild, moodInfo?.mood || 'alegre');
-      if (rawEmoji) {
-        const customIdMatch = rawEmoji.match(/:(\d+)>/);
-        const reactTarget = customIdMatch ? customIdMatch[1] : rawEmoji;
-        await message.react(reactTarget).catch(() => {});
-      }
-    } catch {}
+    // Reacción del bot al mensaje del usuario (solo en ciertos momentos key / 20% probabilidad o comida/manual)
+    const shouldReact = moodInfo?.foodTriggered || moodInfo?.source === 'manual' || moodInfo?.source === 'roleplay' || (Math.random() < 0.20);
+    if (shouldReact) {
+      try {
+        const rawEmoji = getBestEmojiForEmotion(message.guild, moodInfo?.mood || 'alegre');
+        if (rawEmoji) {
+          const customIdMatch = rawEmoji.match(/:(\d+)>/);
+          const reactTarget = customIdMatch ? customIdMatch[1] : rawEmoji;
+          await message.react(reactTarget).catch(() => {});
+        }
+      } catch {}
+    }
 
     memory.messages.push({
       role: 'assistant',
