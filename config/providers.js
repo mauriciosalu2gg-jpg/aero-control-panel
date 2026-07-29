@@ -19,8 +19,8 @@ export const MODEL_LADDERS = {
   gemini: [
     'gemini-2.0-flash',
     'gemini-1.5-flash',
-    'gemini-1.5-pro',
     'gemini-2.0-flash-lite',
+    'gemini-1.5-pro',
   ],
   groq: [
     'llama-3.3-70b-versatile',
@@ -34,29 +34,30 @@ export const MODEL_LADDERS = {
     'gpt-3.5-turbo',
   ],
   anthropic: [
-    'claude-3-5-sonnet-latest',
     'claude-3-5-haiku-latest',
+    'claude-3-5-sonnet-latest',
   ],
   cerebras: [
+    'llama-3.1-8b',
     'llama-3.3-70b',
-    'llama3.1-8b',
   ],
   openrouter: [
-    'meta-llama/llama-3.3-70b-instruct',
     'google/gemini-2.0-flash-exp:free',
     'deepseek/deepseek-r1:free',
     'meta-llama/llama-3.1-8b-instruct:free',
+    'mistralai/mistral-7b-instruct:free',
+    'qwen/qwen-2-7b-instruct:free',
   ],
   huggingface: [
-    'meta-llama/Llama-3.3-70B-Instruct',
+    'meta-llama/Llama-3.1-8B-Instruct',
   ],
   mistral: [
     'mistral-small-latest',
-    'mistral-large-latest',
+    'open-mistral-7b',
   ],
   cohere: [
-    'command-r-plus-08-2024',
     'command-r-08-2024',
+    'command-r-plus-08-2024',
   ],
 };
 

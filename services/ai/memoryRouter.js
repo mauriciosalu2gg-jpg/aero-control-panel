@@ -26,7 +26,9 @@ function getMemoryProviders() {
   if (cfg.groqKey2) providers.push({ name: 'groq-mem-2', type: 'groq', apiKey: cfg.groqKey2 });
   if (cfg.openrouterKey) providers.push({ name: 'openrouter-mem', type: 'openrouter', apiKey: cfg.openrouterKey });
   if (cfg.geminiKey) providers.push({ name: 'gemini-mem', type: 'gemini', apiKey: cfg.geminiKey });
-  if (cfg.ollamaUrl) providers.push({ name: 'ollama-mem', type: 'ollama', url: cfg.ollamaUrl });
+  // Solo agregar Ollama si la URL no es localhost (no disponible en Render)
+  const isLocalOllama = !cfg.ollamaUrl || /localhost|127\.0\.0\.1/i.test(cfg.ollamaUrl);
+  if (cfg.ollamaUrl && !isLocalOllama) providers.push({ name: 'ollama-mem', type: 'ollama', url: cfg.ollamaUrl });
 
   return providers;
 }
