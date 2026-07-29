@@ -1306,20 +1306,23 @@ client.on('messageCreate', async (message) => {
     // 9. Fragmentar la respuesta como escribe una persona real
     const parts = splitHumanized(cleanText, moodInfo);
 
+    const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
+
     if (parts.length === 1) {
       const fullContent = `${pingPrefix}${parts[0]}`;
-      const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
-      let footerStr = thinkingLine;
-      if (thinkingState?.memoryStatusLine) {
-        footerStr = `${thinkingLine}\n${thinkingState.memoryStatusLine}`;
-      }
+      const footerStr = thinkingState?.memoryStatusLine
+        ? `${thinkingLine}\n${thinkingState.memoryStatusLine}`
+        : thinkingLine;
+
       await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
 
-      setTimeout(async () => {
-        try {
-          if (thinkingMsg) await thinkingMsg.edit(fullContent).catch(() => null);
-        } catch {}
-      }, 4500);
+      if (thinkingState?.memoryStatusLine) {
+        setTimeout(async () => {
+          try {
+            if (thinkingMsg) await thinkingMsg.edit(`${fullContent}\n${thinkingLine}`).catch(() => null);
+          } catch {}
+        }, 4500);
+      }
     } else {
       // Enviar las primeras partes directamente como mensajes normales
       for (let i = 0; i < parts.length - 1; i++) {
@@ -1329,21 +1332,22 @@ client.on('messageCreate', async (message) => {
         await message.channel.sendTyping().catch(() => {});
       }
 
-      // La ÚLTIMA parte edita el mensaje thinkingMsg para poner el pie de pensamiento al final
+      // La ÚLTIMA parte edita el mensaje thinkingMsg conservando la línea de tiempo de pensamiento
       const lastPart = parts[parts.length - 1];
       const fullContent = lastPart;
-      const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
-      let footerStr = thinkingLine;
-      if (thinkingState?.memoryStatusLine) {
-        footerStr = `${thinkingLine}\n${thinkingState.memoryStatusLine}`;
-      }
+      const footerStr = thinkingState?.memoryStatusLine
+        ? `${thinkingLine}\n${thinkingState.memoryStatusLine}`
+        : thinkingLine;
+
       await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
 
-      setTimeout(async () => {
-        try {
-          if (thinkingMsg) await thinkingMsg.edit(fullContent).catch(() => null);
-        } catch {}
-      }, 4500);
+      if (thinkingState?.memoryStatusLine) {
+        setTimeout(async () => {
+          try {
+            if (thinkingMsg) await thinkingMsg.edit(`${fullContent}\n${thinkingLine}`).catch(() => null);
+          } catch {}
+        }, 4500);
+      }
     }
 
     config.updateBotStatus(client, lastAIResponse);
