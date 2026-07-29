@@ -2,8 +2,9 @@
 // core/spellingStyle.js
 // Instrucción de ortografía y estilo humano relajado para el prompt.
 
-export function spellingInstruction({ serious = false, crisis = false } = {}) {
-  if (crisis || serious) {
+export function spellingInstruction(moodInfo = {}) {
+  const { mood = '', serious = false, crisis = false } = typeof moodInfo === 'string' ? { mood: moodInfo } : moodInfo;
+  if (crisis || serious || mood === 'serio') {
     return 'Ortografía: escribe con cuidado y claridad. Tildes correctas, sin jerga, sin acortar palabras.';
   }
 

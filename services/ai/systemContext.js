@@ -44,9 +44,9 @@ Debes asumir este estado de ánimo en el 100% de tus expresiones y respuestas.`)
   }
 
   if (isShortInput) {
-    parts.push(`⚠️ ATENCIÓN DE SISTEMA: EL USUARIO ENVIÓ UN SALUDO O TEXTO MUY CORTO.
-Responde OBLIGATORIAMENTE con 1 a 5 palabras máximo (ej: "oli, qué onda?", "hola! qué haces?", "ola, todo bien?", "qué tranza?").
-PROHIBIDO enviar párrafos largos o explicaciones descontextualizadas.`);
+    parts.push(`⚠️ ATENCIÓN DE SISTEMA: EL USUARIO ENVIÓ UN SALUDO O TEXTO MUY CORTO (MENOS DE 12 CARACTERES / SALUDO).
+Responde OBLIGATORIAMENTE con 1 a 5 palabras como máximo (ejemplos: "oli, qué onda?", "hola! qué haces?", "ola, todo bien?", "qué tranza?").
+PROHIBIDO enviar párrafos largos, discursos o respuestas de más de 5 palabras.`);
   }
 
   if (userPoints > 0) {

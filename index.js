@@ -264,8 +264,8 @@ function computeExtraThinkingDelay({ baseMs, hasWebContext, intent, memoryIntent
   }
 
   if (contentLength > 2500) maxMs = Math.max(maxMs, 16000);
-  if (maxMs <= baseMs) return baseMs;
-  return clamp(baseMs + Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs, minMs, maxMs);
+  if (maxMs <= minMs) return minMs;
+  return clamp(minMs + Math.floor(Math.random() * (maxMs - minMs + 1)), minMs, maxMs);
 }
 
 async function runExplicitMemoryUi(message, content, mode, details = '', thinkingState = null, verboseSteps = true, forceClaude = false) {
@@ -376,25 +376,7 @@ async function runExplicitMemoryUi(message, content, mode, details = '', thinkin
     }
 
     if (thinkingState) thinkingState.memoryStatusLine = statusLine;
-
-    if (thinkingState?.aiResponseText) {
-      const elapsedMs = Date.now() - (thinkingState.startTime || Date.now());
-      const thinkingTimeStr = formatThinkingTime(elapsedMs);
-      const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTimeStr}*`;
-      const combinedFooter = `${thinkingLine}\n${statusLine}`;
-      await memoryMsg.edit(`${thinkingState.aiResponseText}\n${combinedFooter}`).catch(() => null);
-
-      // Tras 3 minutos (180,000 ms = 3 min), remueve "Memoria actualizada" dejando solo "Pensó por..."
-      setTimeout(async () => {
-        try {
-          if (thinkingState?.aiResponseText) {
-            await memoryMsg.edit(`${thinkingState.aiResponseText}\n${thinkingLine}`).catch(() => null);
-          }
-        } catch { /* ignore */ }
-      }, 180000);
-    } else {
-      await memoryMsg.edit(statusLine).catch(() => null);
-    }
+    await memoryMsg.edit(statusLine).catch(() => null);
 
   } catch (err) {
     if (interval) clearInterval(interval);
@@ -572,9 +554,12 @@ client.once('ready', async () => {
 
   // Escuchar mensajes outbox desde la web para enviarlos a los canales de Discord
   if (db) {
+    const processingOutbox = new Set();
     db.collection('outbox').onSnapshot(snapshot => {
       if (!snapshot || snapshot.empty) return;
       snapshot.docs.forEach(async (doc) => {
+        if (processingOutbox.has(doc.id)) return;
+        processingOutbox.add(doc.id);
         const data = doc.data();
         if (data && data.channelId && data.message) {
           try {
@@ -582,11 +567,14 @@ client.once('ready', async () => {
             if (channel && channel.isTextBased()) {
               await channel.send(data.message);
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error('[outbox] Error enviando mensaje outbox:', e.message);
+          }
           await doc.ref.delete().catch(() => {});
         }
+        processingOutbox.delete(doc.id);
       });
-    }, () => {});
+    }, (err) => console.warn('[outbox] Listener error:', err.message));
   }
 
   // Iniciar ciclo de comprobación de moderación temporal cada 30 segundos
@@ -879,9 +867,12 @@ async function runAutoModeration(message) {
   return true;
 }
 
+// Mapa para guardar el último anuncio visto por servidor (guildId -> texto)
+if (!client._lastAnnouncement) client._lastAnnouncement = new Map();
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
-  
+
   const botId = client.user?.id || process.env.DISCORD_CLIENT_ID;
   const isDirectMention = Boolean(
     (client.user && message.mentions.has(client.user)) ||
@@ -901,6 +892,34 @@ client.on('messageCreate', async (message) => {
 
   trackedChannels.set(channelId, { guildId });
   markActivity(channelId);
+
+  // ── Canal de avisos / anuncios: solo reaccionar, nunca responder ───────────
+  const isAnnouncementChannel = Boolean(
+    message.channel?.name && /aviso|anuncio|announcement|news|noticias|info|novedades/i.test(message.channel.name)
+  );
+  const isEveryonePing = message.mentions.everyone; // @everyone o @here
+
+  if (isAnnouncementChannel || isEveryonePing) {
+    // Guardar el anuncio en memoria temporal para mencionarlo naturalmente luego
+    const announcementText = message.content?.replace(/@(everyone|here)/g, '').trim();
+    if (announcementText && guildId) {
+      client._lastAnnouncement.set(guildId, { text: announcementText, author: message.author.displayName || message.author.username, ts: Date.now() });
+    }
+
+    // Reaccionar con un emoji del servidor según la emoción activa
+    try {
+      const { getBestEmojiForEmotion } = await import('./core/emojiManager.js');
+      const { getManualMood } = await import('./core/moodEngine.js');
+      const currentMood = getManualMood(guildId) || 'alegre';
+      const guild = message.guild;
+      const bestEmoji = guild ? getBestEmojiForEmotion([...guild.emojis.cache.values()], currentMood) : null;
+      if (bestEmoji) {
+        await message.react(bestEmoji).catch(() => {});
+      }
+    } catch { /* silencio */ }
+
+    return; // No responder, solo reaccionar
+  }
 
   if (isPendingFunadorAnswer(channelId, message.author.id)) {
     return;
@@ -1121,6 +1140,16 @@ client.on('messageCreate', async (message) => {
         }
       }
       // Enriquecer con identidad del usuario actual: ID, nombre y contexto del servidor
+      // Inyectar el último anuncio como contexto si existe y es reciente (< 2 horas)
+      const lastAnn = client._lastAnnouncement?.get(guildId);
+      if (lastAnn && (Date.now() - lastAnn.ts) < 7200000) {
+        memory.messages = memory.messages || [];
+        const annNote = `[CONTEXTO DEL SERVIDOR: Hace poco se publicó un aviso importante que decía: "${lastAnn.text}" — publicado por ${lastAnn.author}. Puedes mencionarlo de forma natural en tu respuesta si el tema es relevante.]`;
+        if (!memory.messages.some(m => m.content?.includes('[CONTEXTO DEL SERVIDOR'))) {
+          memory.messages.unshift({ role: 'system', content: annNote });
+        }
+      }
+
       const identityTag = `[ID:${message.author.id}] ${message.author.displayName || message.author.username} (servidor: ${guildId || 'DM'}, canal: ${channelId})`;
       if (!memory.facts.some(f => f.includes(`[ID:${message.author.id}]`))) {
         memory.facts.push(`Identidad en este servidor: ${identityTag}`);
@@ -1252,6 +1281,21 @@ client.on('messageCreate', async (message) => {
 
     lastAIResponse = { provider: response.provider, model: response.model };
 
+    // Failsafe: Garantizar 1 a 5 palabras para saludos o entradas cortas
+    if (isShortInput && response?.text) {
+      let text = response.text.trim();
+      const words = text.split(/\s+/);
+      if (words.length > 5) {
+        const firstSentence = text.split(/(?<=[.!?])\s+/)[0];
+        const sentenceWords = firstSentence.trim().split(/\s+/);
+        if (sentenceWords.length >= 1 && sentenceWords.length <= 5) {
+          response.text = firstSentence;
+        } else {
+          response.text = words.slice(0, 5).join(' ');
+        }
+      }
+    }
+
     // Reacción del bot al mensaje del usuario (solo en ciertos momentos key / 20% probabilidad o comida/manual)
     const shouldReact = moodInfo?.foodTriggered || moodInfo?.source === 'manual' || moodInfo?.source === 'roleplay' || (Math.random() < 0.20);
     if (shouldReact) {
@@ -1323,47 +1367,50 @@ client.on('messageCreate', async (message) => {
     const parts = splitHumanized(cleanText, moodInfo);
 
     const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
+    const footerStr = thinkingState?.memoryStatusLine
+      ? `${thinkingLine}\n${thinkingState.memoryStatusLine}`
+      : thinkingLine;
+
+    let finalSentMsg = thinkingMsg;
 
     if (parts.length === 1) {
       const fullContent = `${pingPrefix}${parts[0]}`;
-      const footerStr = thinkingState?.memoryStatusLine
-        ? `${thinkingLine}\n${thinkingState.memoryStatusLine}`
-        : thinkingLine;
-
-      await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
-
-      if (thinkingState?.memoryStatusLine) {
-        setTimeout(async () => {
-          try {
-            if (thinkingMsg) await thinkingMsg.edit(`${fullContent}\n${thinkingLine}`).catch(() => null);
-          } catch {}
-        }, 4500);
+      if (thinkingMsg) {
+        await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
+      } else {
+        finalSentMsg = await message.channel.send(`${fullContent}\n${footerStr}`).catch(() => null);
       }
     } else {
-      // Enviar las primeras partes directamente como mensajes normales
-      for (let i = 0; i < parts.length - 1; i++) {
-        const partContent = (i === 0 ? pingPrefix : '') + parts[i];
-        await message.channel.send(partContent).catch(() => null);
+      // 1. La PRIMERA parte edita el mensaje inicial de thinkingMsg (para conservar el orden cronológico)
+      const firstContent = `${pingPrefix}${parts[0]}`;
+      if (thinkingMsg) {
+        await thinkingMsg.edit(firstContent).catch(() => null);
+      } else {
+        await message.channel.send(firstContent).catch(() => null);
+      }
+
+      // 2. Partes intermedias
+      for (let i = 1; i < parts.length - 1; i++) {
         await new Promise(r => setTimeout(r, delayBetweenParts()));
         await message.channel.sendTyping().catch(() => {});
+        await message.channel.send(parts[i]).catch(() => null);
       }
 
-      // La ÚLTIMA parte edita el mensaje thinkingMsg conservando la línea de tiempo de pensamiento
-      const lastPart = parts[parts.length - 1];
-      const fullContent = lastPart;
-      const footerStr = thinkingState?.memoryStatusLine
-        ? `${thinkingLine}\n${thinkingState.memoryStatusLine}`
-        : thinkingLine;
+      // 3. La ÚLTIMA parte se envía como mensaje final con el footer de pensamiento (una sola vez)
+      await new Promise(r => setTimeout(r, delayBetweenParts()));
+      await message.channel.sendTyping().catch(() => {});
+      const lastPartContent = `${parts[parts.length - 1]}\n${footerStr}`;
+      finalSentMsg = await message.channel.send(lastPartContent).catch(() => null);
+    }
 
-      await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
-
-      if (thinkingState?.memoryStatusLine) {
-        setTimeout(async () => {
-          try {
-            if (thinkingMsg) await thinkingMsg.edit(`${fullContent}\n${thinkingLine}`).catch(() => null);
-          } catch {}
-        }, 4500);
-      }
+    if (thinkingState?.memoryStatusLine && finalSentMsg) {
+      const msgToEdit = finalSentMsg;
+      const baseText = parts.length === 1 ? `${pingPrefix}${parts[0]}` : parts[parts.length - 1];
+      setTimeout(async () => {
+        try {
+          if (msgToEdit) await msgToEdit.edit(`${baseText}\n${thinkingLine}`).catch(() => null);
+        } catch {}
+      }, 4500);
     }
 
     config.updateBotStatus(client, lastAIResponse);

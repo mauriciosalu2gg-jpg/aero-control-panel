@@ -1,0 +1,25 @@
+{
+  "memoryScopes/test_guild_99/conversations/test_channel_99/users/test_user_99": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Mi comida favorita es el asado y cumplo el 10 de octubre"
+      }
+    ],
+    "updatedAt": "2026-07-29T03:46:12.730Z"
+  },
+  "memoryScopes/test_guild_99/facts/test_user_99": {
+    "facts": [
+      "Gusto de comida / Dato personal: Mi comida favorita es el asado y cumplo el 10 de octubre"
+    ],
+    "updatedAt": "2026-07-29T03:46:12.730Z"
+  },
+  "user_profiles/test_user_99": {
+    "facts": [
+      "Gusto / Preferencia de comida: Mi comida favorita es el asado y cumplo el 10 de octubre",
+      "Dato personal: Mi comida favorita es el asado y cumplo el 10 de octubre",
+      "Gusto de comida / Dato personal: Mi comida favorita es el asado y cumplo el 10 de octubre"
+    ],
+    "updatedAt": "2026-07-29T03:46:12.731Z"
+  }
+}

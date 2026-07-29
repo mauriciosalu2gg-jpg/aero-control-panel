@@ -35,7 +35,7 @@ for (const [key, val] of Object.entries(diskData)) {
 }
 
 const dirtyKeys = new Set();
-const FLUSH_INTERVAL_MS = 60 * 1000 * 2; // Flush cada 2 minutos
+const FLUSH_INTERVAL_MS = 10 * 1000; // Flush cada 10 segundos
 
 // Periodically flush dirty keys to Firebase and Disk
 setInterval(async () => {
@@ -118,6 +118,25 @@ export function setCached(docPath, data) {
 export async function flushCached(docPath) {
   dirtyKeys.add(docPath);
   saveDiskStore();
+
+  if (db && docPath) {
+    const data = cache.get(docPath);
+    if (data) {
+      const segments = docPath.split('/');
+      if (segments.length % 2 === 0) {
+        try {
+          let docRef = db;
+          for (let i = 0; i < segments.length; i += 2) {
+            docRef = docRef.collection(segments[i]).doc(segments[i + 1]);
+          }
+          await docRef.set(data, { merge: true });
+          dirtyKeys.delete(docPath);
+        } catch (e) {
+          console.warn('[cache] Error en flush individual:', e.message);
+        }
+      }
+    }
+  }
 }
 
 export function deleteCached(docPath) {

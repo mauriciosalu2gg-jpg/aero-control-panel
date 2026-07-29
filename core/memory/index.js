@@ -215,6 +215,44 @@ export async function getUserMemory(userId, guildId, mode, channelId) {
   };
 }
 
+/**
+ * Extrae de forma avanzada e instantánea hechos, gustos, comidas, fechas y datos personales de un texto.
+ * @param {string} text
+ * @returns {Array<string>} Lista de hechos extraídos.
+ */
+export function extractFactsFromText(text) {
+  if (!text || typeof text !== 'string') return [];
+  const trimmed = text.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (lower.startsWith('!') || lower.startsWith('/') || trimmed.length < 4) {
+    return [];
+  }
+
+  const foodKeywords = /milanesa|pan|taco|tarta|comida|pizza|hamburguesa|sushi|asado|empanada|helado|chocolate|cafe|café|mate|pastas|lasaña|cerveza|refresco/i.test(lower);
+  const tasteKeywords = /me gusta|mi favorito|mi favorita|amo el|amo la|me encanta|prefiero|fan de|mi juego favorito|mi color favorito|mi banda favorita|mi canción favorita/i.test(lower);
+  const dislikeKeywords = /odio|no me gusta|detesto|no soporto|no me agrada/i.test(lower);
+  const personalKeywords = /mi nombre es|me llamo|tengo \d+ años|cumplo el|mi cumpleaños|soy de|vivo en|nací en|mi perro|mi gato|mi mascota/i.test(lower);
+
+  const categories = [];
+  if (foodKeywords && (tasteKeywords || dislikeKeywords || /comida|comer|beber|tomar/i.test(lower))) {
+    categories.push(dislikeKeywords ? 'Disgusto de comida' : 'Gusto de comida');
+  } else if (dislikeKeywords) {
+    categories.push('Disgusto personal');
+  } else if (tasteKeywords) {
+    categories.push('Gusto personal');
+  }
+
+  if (personalKeywords) {
+    categories.push('Dato personal');
+  }
+
+  if (categories.length === 0) return [];
+
+  const label = categories.join(' / ');
+  return [`${label}: ${trimmed}`];
+}
+
 export async function saveUserMemory(userId, guildId, mode, memoryData, channelId) {
   if (mode === 'off') return { summarized: false };
 
@@ -224,25 +262,38 @@ export async function saveUserMemory(userId, guildId, mode, memoryData, channelI
   let summarized = false;
   let topicClosed = null;
 
-  // Extracción automática en tiempo real de gustos, comidas, fechas y hechos
+  // Extracción automática e instantánea en tiempo real de gustos, comidas y datos
   if (memoryData.messages && memoryData.messages.length > 0) {
     const lastUserMsg = [...memoryData.messages].reverse().find(m => m.role === 'user');
     if (lastUserMsg && lastUserMsg.content) {
-      const text = lastUserMsg.content;
-      const lower = text.toLowerCase();
-      memoryData.facts = memoryData.facts || [];
+      const extracted = extractFactsFromText(lastUserMsg.content);
+      if (extracted.length > 0) {
+        memoryData.facts = memoryData.facts || [];
+        const newFacts = [];
 
-      if (/milanesa|pan|taco|tarta|comida|pizza|hamburguesa|sushi/i.test(lower)) {
-        const fact = `Le gusta o prefiere: ${text.trim()}`;
-        if (!memoryData.facts.includes(fact)) {
-          memoryData.facts.push(fact);
+        for (const fact of extracted) {
+          if (!memoryData.facts.some(f => f.toLowerCase() === fact.toLowerCase())) {
+            memoryData.facts.push(fact);
+            newFacts.push(fact);
+          }
         }
-      }
 
-      if (/me gusta|mi favorito|mi favorita|amo el|amo la|soy de|tengo \d+|mi cumpleaños|mi nombre es/i.test(lower)) {
-        const fact = `Dato o preferencia: ${text.trim()}`;
-        if (!memoryData.facts.includes(fact)) {
-          memoryData.facts.push(fact);
+        // Sincronizar INMEDIATAMENTE al perfil persistente de usuario (user_profiles en Firestore y Caché)
+        if (newFacts.length > 0) {
+          saveProfileFacts(userId, newFacts).catch(err =>
+            console.error('[memory] Error sincronizando perfil persistente:', err.message)
+          );
+
+          // Sincronizar con el JSON y scope del servidor si aplica
+          if (guildId && guildId !== 'direct') {
+            saveServerMemory(guildId, {
+              users: {
+                [userId]: {
+                  facts: memoryData.facts
+                }
+              }
+            }).catch(() => {});
+          }
         }
       }
     }
@@ -724,6 +775,7 @@ export async function registerGuildLocal(guild) {
   if (db) {
     try {
       await db.collection('guilds').doc(guild.id).set(newData, { merge: true });
+      await db.collection('cached_guilds').doc(guild.id).set(newData, { merge: true });
     } catch {}
   }
   console.log(`[memory] Servidor registrado/actualizado: ${guild.name} (${guild.id})`);

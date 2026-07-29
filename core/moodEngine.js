@@ -134,7 +134,10 @@ export function detectMood({ content = '', guildId = null, userPoints = 0 }) {
 /**
  * Devuelve la instrucción de sistema asociada a cada emoción.
  */
-export function moodInstruction({ mood = 'alegre', intensity = 1, crisis = false } = {}) {
+export function moodInstruction(moodParam = {}) {
+  const moodObj = typeof moodParam === 'string' ? { mood: moodParam } : (moodParam || {});
+  const { mood = 'alegre', intensity = 1, crisis = false } = moodObj;
+
   if (crisis) {
     return 'ALERTA: La persona muestra señales de crisis o dolor real. Deja cualquier personaje de lado. Responde en español claro, cálido, escuchándola con máximo respeto y seriedad.';
   }

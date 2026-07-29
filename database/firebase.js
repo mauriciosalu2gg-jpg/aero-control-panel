@@ -51,4 +51,14 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.apps.length ? admin.firestore() : null;
+
+if (db) {
+  try {
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch (e) {
+    // Si ya fue configurado previamente, ignorar
+  }
+}
+
 export default db;
+

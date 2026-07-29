@@ -103,10 +103,10 @@ export async function saveServerMemory(guildId, data) {
   const existing = readServerMemory(guildId) || {};
   const mergedData = {
     serverId: guildId,
-    name: data.name || existing.name || 'Servidor',
     createdAt: existing.createdAt || new Date().toISOString(),
     ...existing,
     ...data,
+    name: data.name || existing.name || 'Servidor',
     facts: [...new Set([...(existing.facts || []), ...(data.facts || [])])],
     users: {
       ...(existing.users || {}),
