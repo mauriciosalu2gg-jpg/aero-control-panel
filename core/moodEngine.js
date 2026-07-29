@@ -8,7 +8,29 @@
 // Detecta comidas/regalos favoritos (milanesa de carne, pan) para ponerse feliz.
 // ════════════════════════════════════════════════════════════════════════
 
+import { db } from '../database/firebase.js';
+
 const manualMoodOverrides = new Map(); // guildId -> mood string
+
+if (db) {
+  try {
+    db.collection('config').doc('active_mood').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const data = doc.data();
+        if (data && data.mood) {
+          const target = data.guildId || 'global';
+          if (data.mood === 'auto' || data.mood === 'reset') {
+            manualMoodOverrides.delete(target);
+            manualMoodOverrides.delete('global');
+          } else {
+            manualMoodOverrides.set(target, data.mood);
+            manualMoodOverrides.set('global', data.mood);
+          }
+        }
+      }
+    }, () => {});
+  } catch {}
+}
 
 const FOOD_FAVORITES = [
   'milanesa de carne', 'milanesa', 'pan', 'tarta', 'taco', 'tacos',
@@ -36,13 +58,22 @@ function countHits(lower, words) {
  */
 export function setManualMood(guildId, mood) {
   const target = guildId || 'global';
-  if (!mood || mood === 'auto' || mood === 'reset') {
+  const cleanMood = (!mood || mood === 'auto' || mood === 'reset') ? null : mood.toLowerCase();
+
+  if (!cleanMood) {
     manualMoodOverrides.delete(target);
     manualMoodOverrides.delete('global');
   } else {
-    const cleanMood = mood.toLowerCase();
     manualMoodOverrides.set(target, cleanMood);
     manualMoodOverrides.set('global', cleanMood);
+  }
+
+  if (db) {
+    db.collection('config').doc('active_mood').set({
+      guildId: target,
+      mood: cleanMood || 'auto',
+      updatedAt: new Date().toISOString()
+    }, { merge: true }).catch(() => {});
   }
 }
 
