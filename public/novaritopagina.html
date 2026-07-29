@@ -1042,11 +1042,7 @@
       loginScreen.classList.add("hidden");
       loginScreen.style.opacity = "1";
       loginScreen.style.filter = "none";
-      loginScreen.style.pointerEvents = "";
-    }, 160);
-  }
-
-  function runWelcome(name){
+       function runWelcome(name){
     welcomeScreen.classList.remove("hidden");
     setBgFocus(true);
     const target = "¡Bienvenido, " + name + "!";
@@ -1055,18 +1051,18 @@
     const subEl = document.getElementById("welcome-sub");
     contentEl.textContent = "";
 
-    setTimeout(()=> avatarEl.classList.add("show"), 120);
+    setTimeout(()=> avatarEl.classList.add("show"), 80);
 
     let i = 0;
-    const typeSpeed = 58;
+    const typeSpeed = 40;
     (function type(){
       if(i < target.length){
         contentEl.textContent += target[i];
         i++;
         setTimeout(type, typeSpeed);
       } else {
-        setTimeout(()=> subEl.classList.add("show"), 240);
-        setTimeout(leaveWelcome, 2400);
+        setTimeout(()=> subEl.classList.add("show"), 150);
+        setTimeout(leaveWelcome, 800);
       }
     })();
   }
@@ -1077,67 +1073,28 @@
       welcomeScreen.classList.add("hidden");
       welcomeScreen.classList.remove("leaving");
       runLoading();
-    }, 1500);
+    }, 400);
   }
-
-  const FIRST_LOGIN_KEY = "novarito_first_login_done";
-  const infoSteps = [
-    { title: "Sobre Novarito", text: "Novarito es un bot de Discord potenciado por múltiples proveedores de IA: Groq, Gemini, OpenAI y otros, seleccionados de forma dinámica según la tarea." },
-    { title: "ChatEngine", text: "El ChatEngine gestiona la conversación en tiempo real, decidiendo tono, contexto y proveedor de IA más adecuado para cada mensaje." },
-    { title: "MemoryEngine", text: "El MemoryEngine funciona de forma independiente al motor de chat, almacenando contexto persistente entre conversaciones para que Novarito recuerde." },
-    { title: "Emojis dinámicos", text: "El sistema de reacciones adapta los emojis según el tono de cada conversación, dando personalidad propia a cada interacción." },
-    { title: "Infraestructura", text: "Construido sobre Discord.js v14+ y Firebase, lo que permite almacenamiento seguro, escalable y sincronizado en la nube." },
-    { title: "Multi-proveedor", text: "Si un proveedor de IA falla o se satura, Novarito puede cambiar automáticamente a otro sin interrumpir la conversación." },
-    { title: "Dato curioso", text: "El primer chatbot de la historia, ELIZA, fue creado en 1966 en el MIT y simulaba ser un psicoterapeuta." },
-    { title: "Dato curioso", text: "Discord nació en 2015 pensado originalmente para comunidades de videojuegos, y hoy supera los 150 millones de usuarios activos." },
-    { title: "Dato curioso", text: "La palabra 'bot' proviene de 'robot', término acuñado en 1920 por el escritor checo Karel Čapek." },
-    { title: "Seguridad", text: "Las credenciales administrativas nunca se comparten con proveedores externos: este panel es completamente privado." },
-    { title: "Dato curioso", text: "El primer mensaje enviado por internet fue 'LO', en 1969 — el sistema se cayó al intentar escribir 'LOGIN'." },
-    { title: "Preparando panel", text: "Cargando componentes visuales, temas dinámicos y accesos administrativos de Lara. Esto solo ocurre en detalle la primera vez." }
-  ];
 
   function runLoading(){
     loadingScreen.classList.remove("hidden");
     setBgFocus(true);
-    const isFirst = !localStorage.getItem(FIRST_LOGIN_KEY);
-    const duration = isFirst ? 30000 : 3000;
+    const duration = 1500;
     const fill = document.getElementById("load-bar-fill");
     const label = document.getElementById("loading-label");
     const infoBox = document.getElementById("load-info-box");
-    const infoTitle = document.getElementById("load-info-title");
-    const infoText = document.getElementById("load-info-text");
 
-    infoBox.style.display = isFirst ? "flex" : "none";
-    label.textContent = isFirst ? "Cargando Novarito por primera vez..." : "Cargando...";
-
-    let stepTimer = null;
-    if(isFirst){
-      let stepIndex = 0;
-      infoTitle.textContent = infoSteps[0].title;
-      infoText.textContent = infoSteps[0].text;
-      const stepInterval = duration / infoSteps.length;
-      stepTimer = setInterval(()=>{
-        stepIndex++;
-        if(stepIndex < infoSteps.length){
-          infoTitle.textContent = infoSteps[stepIndex].title;
-          infoText.textContent = infoSteps[stepIndex].text;
-          infoText.classList.remove("swap");
-          void infoText.offsetWidth;
-          infoText.classList.add("swap");
-        }
-      }, stepInterval);
-    }
+    if (infoBox) infoBox.style.display = "none";
+    if (label) label.textContent = "Cargando componentes de Novarito...";
 
     const start = performance.now();
     function tick(now){
       const elapsed = now - start;
       const pct = Math.min(100, (elapsed / duration) * 100);
-      fill.style.width = pct + "%";
+      if (fill) fill.style.width = pct + "%";
       if(elapsed < duration){
         requestAnimationFrame(tick);
       } else {
-        if(stepTimer) clearInterval(stepTimer);
-        localStorage.setItem(FIRST_LOGIN_KEY, "1");
         finishLoading();
       }
     }
@@ -1146,32 +1103,21 @@
 
   function finishLoading(){
     const label = document.getElementById("loading-label");
-    const infoBox = document.getElementById("load-info-box");
-    infoBox.style.display = "none";
-    document.getElementById("load-bar-fill").style.width = "100%";
+    if (label) label.textContent = "Entrando...";
+    const fill = document.getElementById("load-bar-fill");
+    if (fill) fill.style.width = "100%";
 
-    let dots = 0;
-    label.textContent = "Entrando";
-    const dotsTimer = setInterval(()=>{
-      dots = (dots + 1) % 4;
-      label.textContent = "Entrando" + ".".repeat(dots);
-    }, 240);
-
-    /* La animación de puntos se repite hasta que el GUI esté realmente listo
-       (fuentes cargadas) y haya pasado un mínimo perceptible, nunca menos. */
-    const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-    const minWait = new Promise(res=> setTimeout(res, 1200));
-
-    Promise.all([fontsReady, minWait]).then(()=>{
-      clearInterval(dotsTimer);
-      loadingScreen.style.transition = "opacity 0.45s var(--ease-soft), filter 0.45s var(--ease-soft)";
-      loadingScreen.style.opacity = "0";
-      loadingScreen.style.filter = "blur(10px)";
-      setTimeout(()=>{
-        loadingScreen.classList.add("hidden");
-        loadingScreen.style.opacity = "1";
-        loadingScreen.style.filter = "none";
-        document.getElementById("load-bar-fill").style.width = "0%";
+    loadingScreen.style.transition = "opacity 0.25s ease-out, filter 0.25s ease-out";
+    loadingScreen.style.opacity = "0";
+    loadingScreen.style.filter = "blur(6px)";
+    setTimeout(()=>{
+      loadingScreen.classList.add("hidden");
+      loadingScreen.style.opacity = "1";
+      loadingScreen.style.filter = "none";
+      if (fill) fill.style.width = "0%";
+      enterApp();
+    }, 250);
+  }ad-bar-fill").style.width = "0%";
         enterApp();
       }, 450);
     });
