@@ -55,7 +55,7 @@ export function classifyEmojiEmotion(name) {
  * @param {string} [fallbackUnicode='✨'] 
  * @returns {string} - Código de mención del emoji o fallback unicode.
  */
-export function getBestEmojiForEmotion(guild, targetEmotion, fallbackUnicode = '✨') {
+export function getBestEmojiForEmotion(guild, targetEmotion, fallbackUnicode = '') {
   if (!guild || !guild.emojis?.cache || guild.emojis.cache.size === 0) {
     return fallbackUnicode;
   }
@@ -67,14 +67,18 @@ export function getBestEmojiForEmotion(guild, targetEmotion, fallbackUnicode = '
   }
 
   if (guildMap && guildMap.size > 0) {
+    const matching = [];
     for (const [, emojiData] of guildMap) {
       if (emojiData.emotion === targetEmotion) {
-        return emojiData.mention;
+        matching.push(emojiData.mention);
       }
     }
-    // Si no encuentra por emoción exacta, devuelve el primer emoji del servidor
-    const first = guildMap.values().next().value;
-    if (first) return first.mention;
+    if (matching.length > 0) {
+      return matching[Math.floor(Math.random() * matching.length)];
+    }
+
+    const allMentions = Array.from(guildMap.values()).map(e => e.mention);
+    return allMentions[Math.floor(Math.random() * allMentions.length)];
   }
 
   return fallbackUnicode;
@@ -90,9 +94,34 @@ export function getGuildEmojiCatalog(guild) {
   return registered;
 }
 
+/**
+ * Reemplaza automáticamente todos los emojis unicode de un texto por emojis variados del servidor.
+ * @param {string} text 
+ * @param {import('discord.js').Guild|null} guild 
+ * @returns {string}
+ */
+export function replaceUnicodeWithServerEmojis(text, guild) {
+  if (!text) return text;
+  const unicodeEmojiRegex = /\p{Extended_Pictographic}/gu;
+
+  if (!guild || !guild.emojis?.cache || guild.emojis.cache.size === 0) {
+    return text.replace(unicodeEmojiRegex, '').replace(/\s{2,}/g, ' ').trim();
+  }
+
+  const serverEmojis = Array.from(guild.emojis.cache.values());
+  if (serverEmojis.length === 0) return text;
+
+  return text.replace(unicodeEmojiRegex, () => {
+    const randomIndex = Math.floor(Math.random() * serverEmojis.length);
+    const chosenEmoji = serverEmojis[randomIndex];
+    return chosenEmoji ? chosenEmoji.toString() : '';
+  });
+}
+
 export default {
   registerGuildEmojis,
   classifyEmojiEmotion,
   getBestEmojiForEmotion,
   getGuildEmojiCatalog,
+  replaceUnicodeWithServerEmojis,
 };

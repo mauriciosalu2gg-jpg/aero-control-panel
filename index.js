@@ -14,7 +14,7 @@ import { commandDefinitions } from './interactions/commandDefinitions.js';
 import { isOwner, isSubCreator, isAdminOrHigher } from './core/permissions.js';
 import { analyzeContext } from './core/contextAnalyzer.js';
 import { detectMood } from './core/moodEngine.js';
-import { getBestEmojiForEmotion } from './core/emojiManager.js';
+import { getBestEmojiForEmotion, replaceUnicodeWithServerEmojis } from './core/emojiManager.js';
 import { trimHistory, summarizeOld, estimateTokens, buildUltraCompactContext } from './core/tokenOptimizer.js';
 import { splitHumanized, delayBetweenParts } from './core/messageSplitter.js';
 import { pickMuletilla } from './core/personality.js';
@@ -70,42 +70,7 @@ function formatMemoryErrorStatus(errorType, rawMessage = '') {
   }
 }
 
-/** Convierte automáticamente emojis unicode genéricos en emojis personalizados del servidor */
-function replaceUnicodeWithServerEmojis(text, guild = null) {
-  if (!text) return text;
-  
-  let customEmojiList = ['<:aceptar:1527959750443012187>', '<:pensar:1527960192787025920>', '<:hojita:1527960400975630436>', '<:servidor:1527959988184682506>', '<:recuperar:1528121773764116651>'];
-  if (guild && guild.emojis?.cache?.size > 0) {
-    customEmojiList = guild.emojis.cache.first(6).map(e => e.toString());
-  }
 
-  const defaultAccept = customEmojiList[0] || '<:aceptar:1527959750443012187>';
-  const defaultThink = customEmojiList[1] || customEmojiList[0] || '<:pensar:1527960192787025920>';
-  const defaultLeaf = customEmojiList[2] || customEmojiList[0] || '<:hojita:1527960400975630436>';
-
-  const unicodeMap = {
-    '😂': defaultAccept,
-    '😊': defaultLeaf,
-    '💖': defaultAccept,
-    '😜': defaultLeaf,
-    '🔥': defaultThink,
-    '💭': defaultThink,
-    '👍': defaultAccept,
-    '😍': defaultLeaf,
-    '😎': defaultAccept,
-    '🥰': defaultLeaf,
-    '😅': defaultThink,
-    '😄': defaultAccept,
-    '😉': defaultLeaf,
-    '😁': defaultAccept,
-  };
-
-  let clean = text;
-  for (const [uEmoji, cEmoji] of Object.entries(unicodeMap)) {
-    clean = clean.replaceAll(uEmoji, cEmoji);
-  }
-  return clean;
-}
 
 // Trackea canales activos (donde el bot ya hablo al menos una vez) para el
 // watcher de inactividad, sin necesidad de guardar esto en DB.

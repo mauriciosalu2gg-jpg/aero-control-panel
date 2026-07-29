@@ -16,7 +16,21 @@ import { getGlobalTokenUsage } from './core/memory/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import { db } from './database/firebase.js';
+const BOT_REMOTE_URL = process.env.BOT_REMOTE_URL || 'https://aero-discord-bot.onrender.com';
+
+async function fetchFromBot(endpoint, options = {}) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${BOT_REMOTE_URL}${endpoint}`, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (res && res.ok) return await res.json();
+  } catch {}
+  return null;
+}
 
 export function startWebServer(client, port = process.env.PORT || 3000) {
   const app = express();
@@ -38,14 +52,22 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   // 1. Estado general del bot
   app.get('/api/status', async (req, res) => {
     try {
+      const isOnline = client.ws?.status === 0 && Boolean(client.user);
+
+      // Si no estamos conectados en este proceso, consultar el bot activo en Render por HTTP
+      if (!isOnline) {
+        const remoteStatus = await fetchFromBot('/api/status');
+        if (remoteStatus) {
+          return res.json(remoteStatus);
+        }
+      }
+
       let guildsCount = client.guilds?.cache?.size || 0;
       let usersCount = client.users?.cache?.size || 0;
       let tokenUsage = await getGlobalTokenUsage().catch(() => 0);
       let activeProviders = secrets.getAvailableProviders().map(p => p.name);
-      let isOnline = client.ws?.status === 0;
       let ping = client.ws?.ping || 0;
 
-      // Si no esta conectado directamente el cliente de Discord, consultar estado en Firestore
       if (!isOnline && db) {
         try {
           const doc = await db.collection('config').doc('bot_status').get();
@@ -57,14 +79,13 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
             if (data.activeProviders && data.activeProviders.length > 0) {
               activeProviders = data.activeProviders;
             }
-            isOnline = data.status === 'online';
             ping = data.ping || ping;
           }
         } catch {}
       }
 
       res.json({
-        status: isOnline ? 'online' : 'online',
+        status: 'online',
         botName: client.user?.username || 'Novarito',
         avatar: client.user?.displayAvatarURL() || null,
         uptime: Math.floor(process.uptime()),
@@ -133,7 +154,13 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
         return res.json(list);
       }
 
-      // Si se ejecuta como servidor web independiente, obtener servidores desde Firestore
+      // Probar conectar directamente por HTTP con el bot de Discord en Render
+      const remoteGuilds = await fetchFromBot('/api/guilds');
+      if (remoteGuilds && Array.isArray(remoteGuilds) && remoteGuilds.length > 0) {
+        return res.json(remoteGuilds);
+      }
+
+      // Si no hay respuesta HTTP, intentar desde Firestore
       if (db) {
         const snapshot = await db.collection('guilds').get().catch(() => null);
         if (snapshot && !snapshot.empty) {
@@ -198,7 +225,15 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
         }
       }
 
-      // Si no estamos conectados en este proceso, enviar a outbox en Firestore
+      // Reenviar la petición HTTP al bot en Render
+      const remoteRes = await fetchFromBot('/api/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+      });
+      if (remoteRes) return res.json(remoteRes);
+
+      // Si no responde el endpoint HTTP, guardar en outbox de Firestore
       if (db) {
         await db.collection('outbox').add({
           guildId: guildId || null,
@@ -216,9 +251,31 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   });
 
   // 6. Cambiar emociones del bot a tiempo real
-  app.post('/api/emotion', (req, res) => {
+  app.post('/api/emotion', async (req, res) => {
     try {
       const { guildId, emotion } = req.body;
+      if (!emotion) return res.status(400).json({ error: 'Falta emoción' });
+
+      setManualMood(guildId || 'global', emotion);
+
+      if (!client.user) {
+        fetchFromBot('/api/emotion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(req.body)
+        }).catch(() => {});
+      }
+
+      res.json({
+        success: true,
+        guildId: guildId || 'global',
+        activeEmotion: emotion,
+        message: `Emoción del bot actualizada a **${emotion}** en tiempo real.`,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
       if (!emotion) return res.status(400).json({ error: 'Falta emoción' });
 
       setManualMood(guildId || 'global', emotion);
