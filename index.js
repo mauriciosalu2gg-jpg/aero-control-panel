@@ -575,6 +575,49 @@ client.once('ready', async () => {
   await hydrateFlags().catch(err => console.error('[hydrate/flags]', err.message));
   await hydrateModerationFlags().catch(err => console.error('[hydrate/moderation]', err.message));
 
+  // Sincronizar estado en vivo con Firestore (para que aero-control-panel lea servidores, tokens y proveedor activo)
+  const syncStatusToFirestore = async () => {
+    if (!db) return;
+    try {
+      const { getGlobalTokenUsage } = await import('./core/memory/index.js');
+      const tokenUsage = await getGlobalTokenUsage().catch(() => 0);
+      const activeProviders = secrets.getAvailableProviders().map(p => p.name);
+
+      await db.collection('config').doc('bot_status').set({
+        status: 'online',
+        uptime: Math.floor(process.uptime()),
+        guildsCount: client.guilds?.cache?.size || 0,
+        usersCount: client.users?.cache?.size || 0,
+        tokenUsage,
+        activeProviders,
+        ping: client.ws?.ping || 0,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) {}
+  };
+
+  syncStatusToFirestore();
+  setInterval(syncStatusToFirestore, 15000);
+
+  // Escuchar mensajes outbox desde la web para enviarlos a los canales de Discord
+  if (db) {
+    db.collection('outbox').onSnapshot(snapshot => {
+      if (!snapshot || snapshot.empty) return;
+      snapshot.docs.forEach(async (doc) => {
+        const data = doc.data();
+        if (data && data.channelId && data.message) {
+          try {
+            const channel = await client.channels.fetch(data.channelId).catch(() => null);
+            if (channel && channel.isTextBased()) {
+              await channel.send(data.message);
+            }
+          } catch (e) {}
+          await doc.ref.delete().catch(() => {});
+        }
+      });
+    }, () => {});
+  }
+
   // Iniciar ciclo de comprobación de moderación temporal cada 30 segundos
   setInterval(() => {
     processTimedModeration(client).catch(err => console.error('[moderation-timer] Error en el ciclo:', err.message));

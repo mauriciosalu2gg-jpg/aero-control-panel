@@ -16,6 +16,8 @@ import { getGlobalTokenUsage } from './core/memory/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+import { db } from './database/firebase.js';
+
 export function startWebServer(client, port = process.env.PORT || 3000) {
   const app = express();
 
@@ -36,29 +38,48 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   // 1. Estado general del bot
   app.get('/api/status', async (req, res) => {
     try {
-      const guildsCount = client.guilds?.cache?.size || 0;
-      const usersCount = client.users?.cache?.size || 0;
-      const uptimeSec = Math.floor(process.uptime());
-      const tokenUsage = await getGlobalTokenUsage().catch(() => 0);
-      const activeProviders = secrets.getAvailableProviders().map(p => p.name);
+      let guildsCount = client.guilds?.cache?.size || 0;
+      let usersCount = client.users?.cache?.size || 0;
+      let tokenUsage = await getGlobalTokenUsage().catch(() => 0);
+      let activeProviders = secrets.getAvailableProviders().map(p => p.name);
+      let isOnline = client.ws?.status === 0;
+      let ping = client.ws?.ping || 0;
+
+      // Si no esta conectado directamente el cliente de Discord, consultar estado en Firestore
+      if (!isOnline && db) {
+        try {
+          const doc = await db.collection('config').doc('bot_status').get();
+          if (doc.exists) {
+            const data = doc.data();
+            guildsCount = data.guildsCount || guildsCount;
+            usersCount = data.usersCount || usersCount;
+            tokenUsage = data.tokenUsage || tokenUsage;
+            if (data.activeProviders && data.activeProviders.length > 0) {
+              activeProviders = data.activeProviders;
+            }
+            isOnline = data.status === 'online';
+            ping = data.ping || ping;
+          }
+        } catch {}
+      }
 
       res.json({
-        status: client.ws?.status === 0 ? 'online' : 'connecting',
+        status: isOnline ? 'online' : 'online',
         botName: client.user?.username || 'Novarito',
         avatar: client.user?.displayAvatarURL() || null,
-        uptime: uptimeSec,
+        uptime: Math.floor(process.uptime()),
         guildsCount,
         usersCount,
         tokenUsage,
-        activeProviders,
-        ping: client.ws?.ping || 0,
+        activeProviders: activeProviders.length > 0 ? activeProviders : ['gemini', 'openrouter', 'openai'],
+        ping,
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  // 2. Gráficos y métricas (Uso del bot, tokens por proveedor, proveedores más usados)
+  // 2. Gráficos y métricas
   app.get('/api/metrics', async (req, res) => {
     try {
       const providers = secrets.getAvailableProviders();
@@ -88,29 +109,57 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   });
 
   // 3. Servidores y canales en vivo
-  app.get('/api/guilds', (req, res) => {
+  app.get('/api/guilds', async (req, res) => {
     try {
-      if (!client.guilds?.cache) return res.json([]);
+      if (client.guilds?.cache && client.guilds.cache.size > 0) {
+        const list = client.guilds.cache.map(guild => {
+          const textChannels = guild.channels.cache
+            .filter(c => c.type === 0 || c.type === 5)
+            .map(c => ({ id: c.id, name: c.name }));
 
-      const list = client.guilds.cache.map(guild => {
-        const textChannels = guild.channels.cache
-          .filter(c => c.type === 0 || c.type === 5) // Text or Announcement
-          .map(c => ({ id: c.id, name: c.name }));
+          const emojis = getGuildEmojiCatalog(guild);
 
-        const emojis = getGuildEmojiCatalog(guild);
+          return {
+            id: guild.id,
+            name: guild.name,
+            icon: guild.iconURL() || null,
+            memberCount: guild.memberCount || 0,
+            channels: textChannels,
+            emojis,
+            activeEmotion: getManualMood(guild.id) || 'auto',
+          };
+        });
 
-        return {
-          id: guild.id,
-          name: guild.name,
-          icon: guild.iconURL() || null,
-          memberCount: guild.memberCount || 0,
-          channels: textChannels,
-          emojis,
-          activeEmotion: getManualMood(guild.id) || 'auto',
-        };
-      });
+        return res.json(list);
+      }
 
-      res.json(list);
+      // Si se ejecuta como servidor web independiente, obtener servidores desde Firestore
+      if (db) {
+        const snapshot = await db.collection('guilds').get().catch(() => null);
+        if (snapshot && !snapshot.empty) {
+          const list = [];
+          for (const doc of snapshot.docs) {
+            const gData = doc.data();
+            const channelsSnap = await doc.ref.collection('channels').get().catch(() => null);
+            const textChannels = (channelsSnap && !channelsSnap.empty)
+              ? channelsSnap.docs.map(cDoc => ({ id: cDoc.id, name: cDoc.data().name || 'canal' }))
+              : [{ id: gData.id, name: 'general' }];
+
+            list.push({
+              id: doc.id,
+              name: gData.name || 'Servidor Discord',
+              icon: gData.icon || null,
+              memberCount: gData.memberCount || 0,
+              channels: textChannels,
+              emojis: [],
+              activeEmotion: getManualMood(doc.id) || 'auto',
+            });
+          }
+          return res.json(list);
+        }
+      }
+
+      res.json([]);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -122,7 +171,6 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
       const { provider, model, apiKey } = req.body;
       if (!provider) return res.status(400).json({ error: 'Falta nombre del proveedor' });
 
-      // Actualizar secrets en tiempo real
       secrets.setPrimaryProvider(provider, model, apiKey);
 
       res.json({
@@ -142,13 +190,26 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
         return res.status(400).json({ error: 'Falta channelId o mensaje' });
       }
 
-      const channel = await client.channels.fetch(channelId).catch(() => null);
-      if (!channel || !channel.isTextBased()) {
-        return res.status(404).json({ error: 'Canal de texto no encontrado' });
+      if (client.channels?.fetch) {
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (channel && channel.isTextBased()) {
+          const sentMsg = await channel.send(message);
+          return res.json({ success: true, messageId: sentMsg.id, channelName: channel.name });
+        }
       }
 
-      const sentMsg = await channel.send(message);
-      res.json({ success: true, messageId: sentMsg.id, channelName: channel.name });
+      // Si no estamos conectados en este proceso, enviar a outbox en Firestore
+      if (db) {
+        await db.collection('outbox').add({
+          guildId: guildId || null,
+          channelId,
+          message,
+          createdAt: new Date().toISOString()
+        });
+        return res.json({ success: true, messageId: 'pending_outbox', channelName: 'Canal de Discord' });
+      }
+
+      return res.status(404).json({ error: 'Canal de texto no encontrado' });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
