@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/errorClassifier.js
 // Analizador central de errores de proveedores de IA.
 // No se limita al status HTTP: revisa el texto del mensaje de error

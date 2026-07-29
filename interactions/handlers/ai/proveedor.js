@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { setForcedProvider } from '../../../services/ai/providerHealth.js';
 
 export async function handleProveedor(interaction, nombre) {
@@ -7,4 +8,3 @@ export async function handleProveedor(interaction, nombre) {
     setForcedProvider(nombre);
   }
 }
-

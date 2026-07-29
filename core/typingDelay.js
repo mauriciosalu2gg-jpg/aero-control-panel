@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/typingDelay.js
 // Calcula cuanto "tarda en escribir/responder" el bot antes de mandar el
 // mensaje, de forma dinamica segun el peso del contexto: un mensaje corto y

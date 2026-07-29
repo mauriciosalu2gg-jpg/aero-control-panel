@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/spellingStyle.js
 // Instrucción de ortografía y estilo humano relajado para el prompt.
 

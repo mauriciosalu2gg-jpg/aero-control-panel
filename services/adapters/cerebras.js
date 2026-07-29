@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/cerebras.js
 // Adaptador propio de Cerebras. NO reutiliza el adaptador de OpenAI:
 // Cerebras tiene su propio endpoint y sus propios modelos.

@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/personality.js
 // Banco de jerga latinoamericana, muletillas, y utilidades para armar la
 // guia de emojis CUSTOM del servidor de Discord (no unicode/windows) para

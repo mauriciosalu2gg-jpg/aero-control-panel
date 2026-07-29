@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/local.js
 // Adaptadores para modelos locales (Ollama / LM Studio). Se usan como
 // último respaldo cuando ningún proveedor en la nube responde.

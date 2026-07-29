@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { PDFParse } from 'pdf-parse';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -110,4 +111,3 @@ function isTextExtension(filename) {
   const textExts = ['txt', 'md', 'js', 'py', 'json', 'html', 'css', 'csv', 'xml', 'log', 'env'];
   return textExts.includes(ext);
 }
-

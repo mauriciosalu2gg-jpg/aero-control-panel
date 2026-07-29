@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/gemini.js
 import SYSTEM_PROMPT from '../../prompt.js';
 import { getMaxTokens } from '../../config/providers.js';

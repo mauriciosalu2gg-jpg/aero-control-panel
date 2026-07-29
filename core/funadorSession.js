@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/funadorSession.js
 // "Juicio" en broma, tipo juego de mesa entre amigos, narrado en muchas
 // etapas reales (nunca un bloque de texto de una sola vez). NUNCA arranca

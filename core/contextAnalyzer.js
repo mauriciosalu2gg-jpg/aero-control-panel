@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/contextAnalyzer.js
 // Arma un objeto compacto de contexto a partir del mensaje actual y el
 // historial reciente, para que moodEngine y aiManager decidan cómo responder.

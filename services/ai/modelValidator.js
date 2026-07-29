@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/modelValidator.js
 // Valida al arrancar (y opcionalmente cada cierto tiempo) que los modelos
 // configurados en MODEL_LADDERS realmente existen segun la API oficial de

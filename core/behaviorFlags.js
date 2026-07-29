@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/behaviorFlags.js
 // Flags de comportamiento controlables por Lara o Alero, por servidor:
 // - swearing: si el bot puede decir groserias (ON por defecto)

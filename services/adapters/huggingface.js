@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/huggingface.js
 // HuggingFace se usa como último respaldo. Usa el router de inferencia
 // compatible con el esquema OpenAI (router.huggingface.co).

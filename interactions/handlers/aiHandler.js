@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { handleEstado } from './ai/estado.js';
 import { handleProveedor } from './ai/proveedor.js';
 import { handleImaginar } from './ai/imaginar.js';

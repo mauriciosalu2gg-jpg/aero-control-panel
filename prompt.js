@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // prompt.js
 // Prompt base simplificado y pacífico.
 
@@ -40,4 +41,3 @@ Reglas duras (estas no cambian pase lo que pase):
 `.trim();
 
 export default SYSTEM_PROMPT;
-

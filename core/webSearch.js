@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/webSearch.js
 // Busqueda web para que el bot conteste con info actual sin decir NUNCA
 // "lo busque en internet" ni citar fuentes. La idea es que el modelo la use

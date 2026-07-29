@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/cohere.js
 // Cohere - https://dashboard.cohere.com/api-keys
 // Las "trial keys" de Cohere son gratis (con rate limit mensual) y su

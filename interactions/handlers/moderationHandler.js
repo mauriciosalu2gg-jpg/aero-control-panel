@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } from 'discord.js';
 import { 
   setModerationActive, 

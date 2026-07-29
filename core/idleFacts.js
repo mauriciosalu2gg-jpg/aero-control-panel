@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/idleFacts.js
 // Si un canal lleva 6+ horas sin actividad, el bot puede tirar un dato
 // curioso por su cuenta para reactivar la charla, EXCEPTO si Lara le pidio

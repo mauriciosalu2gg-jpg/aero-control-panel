@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/providerRegistry.js
 // Registro único de adaptadores. Agregar un proveedor nuevo en el futuro
 // significa: crear su adaptador en services/adapters/ y añadir una línea

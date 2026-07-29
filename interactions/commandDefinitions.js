@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { SlashCommandBuilder } from 'discord.js';
 
 export const commandDefinitions = [

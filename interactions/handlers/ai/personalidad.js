@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { getUserMemoryConfig, setUserMemoryConfig } from '../../../core/memory/config.js';
 
 export async function handlePersonalidad(interaction, action, value) {

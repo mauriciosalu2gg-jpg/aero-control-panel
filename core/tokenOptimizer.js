@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/tokenOptimizer.js
 // Recorta y resume el historial de forma heurística (SIN llamar a la IA)
 // para no gastar tokens extra solo en armar el contexto.

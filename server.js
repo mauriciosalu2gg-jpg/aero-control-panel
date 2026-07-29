@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // server.js
 // ════════════════════════════════════════════════════════════════════════
 // 🚀 Servidor Express Web & API REST — OnRender Ready

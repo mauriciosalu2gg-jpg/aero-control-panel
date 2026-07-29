@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // config/providers.js
 // Configuración centralizada de todos los proveedores de IA.
 

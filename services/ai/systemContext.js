@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/systemContext.js
 // Construye las instrucciones de sistema (system prompt) que definen la
 // personalidad del bot ("Novarito"), su tono mexicano y las reglas contextuales.

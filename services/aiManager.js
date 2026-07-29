@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/aiManager.js
 // Orquestador de IA. Responsabilidades separadas en módulos propios:
 //   - services/ai/panelConfig.js      -> config dinámica desde el panel web

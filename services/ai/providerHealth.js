@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/providerHealth.js
 // Estado en memoria de cada proveedor: salud, cooldown y estadísticas.
 // Vive mientras el proceso está corriendo (no persiste a disco/Firestore

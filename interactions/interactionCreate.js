@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { handleAiCommand } from './handlers/aiHandler.js';
 import { handleModerationCommand } from './handlers/moderationHandler.js';
 

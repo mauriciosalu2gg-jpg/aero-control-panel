@@ -47,3 +47,4 @@ services/
 database/
   firebase.js         # Firebase Admin init
 ```
+

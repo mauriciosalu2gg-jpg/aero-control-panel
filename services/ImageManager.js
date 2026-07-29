@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 export async function generateImage(prompt) {
   // En el futuro, esta función puede decidir qué proveedor usar (Pollinations, OpenAI, etc)
   const safePrompt = encodeURIComponent(prompt);

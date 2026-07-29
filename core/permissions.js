@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/permissions.js
 // Sistema de roles: creator (Lara) > subCreator (Alero/Nova) > admin > user.
 //

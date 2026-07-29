@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/creatorPrompt.js
 // "Prompt creador": bloque EXTRA que se suma al prompt normal solo cuando
 // quien escribe es Lara (creator) o Gio/Alero (subCreator), identificados

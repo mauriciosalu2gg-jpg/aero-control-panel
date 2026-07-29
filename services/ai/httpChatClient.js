@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/httpChatClient.js
 // Cliente HTTP compartido para proveedores compatibles con el esquema
 // OpenAI /chat/completions (Groq, Cerebras, OpenRouter, HuggingFace router, etc).

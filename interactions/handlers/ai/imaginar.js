@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { generateImage } from '../../../services/ImageManager.js';
 
 export async function handleImaginar(interaction, prompt) {

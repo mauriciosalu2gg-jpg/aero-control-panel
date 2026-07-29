@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { db } from '../../database/firebase.js';
 import { getCached, setCached } from '../cache/firebaseCache.js';
 import { askAI } from '../../services/aiManager.js';

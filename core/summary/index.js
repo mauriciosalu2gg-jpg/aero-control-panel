@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/summary/index.js
 // ════════════════════════════════════════════════════════════════════════
 // 🧠 Memory Engine — Sintetizador de temas, perfiles e importancia.

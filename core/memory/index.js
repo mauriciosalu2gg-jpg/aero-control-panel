@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { getCached, setCached, flushCached, deleteCached } from '../cache/firebaseCache.js';
 import { summarizeMemoryHistory, detectTopicChange } from '../summary/index.js';
 import { isMemoryEngineAvailable } from '../../services/ai/memoryRouter.js';

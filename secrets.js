@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // secrets.js
 // Cada proveedor tiene su propia API Key independiente en el .env.
 // Cambiar de proveedor o rotar una key es solo editar el .env: no hay

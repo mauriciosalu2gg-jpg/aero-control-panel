@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/messageSplitter.js
 // A veces divide la respuesta en varios mensajes separados (2, 3 o incluso
 // mas), como escribe alguien real que va soltando ideas de a poco en vez de

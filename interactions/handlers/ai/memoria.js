@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 import { resetUserMemory } from '../../../core/memory/index.js';
 import { getUserMemoryConfig, setUserMemoryConfig } from '../../../core/memory/config.js';
 import { isOwner } from '../../../core/permissions.js';

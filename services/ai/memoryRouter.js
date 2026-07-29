@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/memoryRouter.js
 // ════════════════════════════════════════════════════════════════════════
 // 🧠 Memory Engine — Router independiente y aislado del Chat Engine.

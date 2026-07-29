@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/panelConfig.js
 // Config dinamica publicada por el panel web (Firestore config/ai), con
 // refresco periodico. Aislado del resto de aiManager para mantener

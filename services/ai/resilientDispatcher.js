@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/ai/resilientDispatcher.js
 // Motor de resiliencia: para cada proveedor intenta su escalera de modelos
 // (mejor -> peor) y, si el proveedor entero falla, salta transparentemente

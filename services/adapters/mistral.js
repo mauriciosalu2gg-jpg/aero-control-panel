@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/mistral.js
 // Mistral (La Plateforme) - https://console.mistral.ai
 // Tier gratis (Experiment plan) con rate limits bajos, endpoint

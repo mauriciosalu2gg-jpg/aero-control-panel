@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // config.js
 // Wrapper fino sobre core/memory.js (Firestore) + estado en vivo del bot
 // para el panel web (bot/status), igual que la version original.

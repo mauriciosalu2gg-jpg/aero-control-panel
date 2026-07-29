@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/emojiManager.js
 // ════════════════════════════════════════════════════════════════════════
 // 🎭 Emoji Manager — Registro inteligente de emojis por servidor.

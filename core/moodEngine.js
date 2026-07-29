@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // core/moodEngine.js
 // ════════════════════════════════════════════════════════════════════════
 // 🎭 Motor de Emociones Dinámico — Novarito
@@ -150,5 +151,3 @@ export default {
   setManualMood,
   getManualMood,
 };
-
-

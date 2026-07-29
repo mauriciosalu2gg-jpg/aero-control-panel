@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // services/adapters/groq.js
 import SYSTEM_PROMPT from '../../prompt.js';
 import { chatCompletionsRequest } from '../ai/httpChatClient.js';

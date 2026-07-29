@@ -1,3 +1,4 @@
+// Updated Novarito aero-control-panel
 // index.js
 import { Client, GatewayIntentBits, Partials, REST, Routes } from 'discord.js';
 import http from 'node:http';
