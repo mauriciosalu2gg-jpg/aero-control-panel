@@ -1037,31 +1037,36 @@
     loginScreen.style.transition = "opacity 0.16s ease-out, filter 0.16s ease-out";
     loginScreen.style.opacity = "0";
     loginScreen.style.filter = "blur(4px)";
-    runWelcome(name);
+    
     setTimeout(()=>{
       loginScreen.classList.add("hidden");
       loginScreen.style.opacity = "1";
       loginScreen.style.filter = "none";
-       function runWelcome(name){
+      loginScreen.style.pointerEvents = "";
+      runWelcome(name);
+    }, 160);
+  }
+
+  function runWelcome(name){
     welcomeScreen.classList.remove("hidden");
     setBgFocus(true);
     const target = "¡Bienvenido, " + name + "!";
     const contentEl = document.getElementById("welcome-text-content");
     const avatarEl = document.getElementById("welcome-avatar");
     const subEl = document.getElementById("welcome-sub");
-    contentEl.textContent = "";
+    if (contentEl) contentEl.textContent = "";
 
-    setTimeout(()=> avatarEl.classList.add("show"), 80);
+    setTimeout(()=> avatarEl && avatarEl.classList.add("show"), 80);
 
     let i = 0;
     const typeSpeed = 40;
     (function type(){
       if(i < target.length){
-        contentEl.textContent += target[i];
+        if (contentEl) contentEl.textContent += target[i];
         i++;
         setTimeout(type, typeSpeed);
       } else {
-        setTimeout(()=> subEl.classList.add("show"), 150);
+        setTimeout(()=> subEl && subEl.classList.add("show"), 150);
         setTimeout(leaveWelcome, 800);
       }
     })();
@@ -1117,10 +1122,6 @@
       if (fill) fill.style.width = "0%";
       enterApp();
     }, 250);
-  }ad-bar-fill").style.width = "0%";
-        enterApp();
-      }, 450);
-    });
   }
 
   function enterApp(){
