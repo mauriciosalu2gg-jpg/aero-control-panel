@@ -258,13 +258,11 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
 
       setManualMood(guildId || 'global', emotion);
 
-      if (!client.user) {
-        fetchFromBot('/api/emotion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(req.body)
-        }).catch(() => {});
-      }
+      fetchFromBot('/api/emotion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body)
+      }).catch(() => {});
 
       res.json({
         success: true,
@@ -280,20 +278,43 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   // 7. Ver lista completa de memoria en formato resumido estilo Claude
   app.get('/api/memory', async (req, res) => {
     try {
-      const { userId, guildId } = req.query;
-
-      if (userId) {
-        const mem = await getUserMemory(userId, guildId || null, 'global', null);
-        return res.json({
-          type: 'user',
-          userId,
-          facts: mem.facts || [],
-          summary: mem.summary || '',
-          messagesCount: (mem.messages || []).length,
-        });
+      if (!client.user) {
+        const remoteMem = await fetchFromBot('/api/memory' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''));
+        if (remoteMem) return res.json(remoteMem);
       }
 
-      // Memoria de todos los servidores
+      if (db) {
+        const usersSnap = await db.collection('users').get().catch(() => null);
+        if (usersSnap && !usersSnap.empty) {
+          const servers = [];
+          for (const uDoc of usersSnap.docs) {
+            const uData = uDoc.data();
+            const memsSnap = await uDoc.ref.collection('memories').get().catch(() => null);
+            const facts = [];
+            if (memsSnap && !memsSnap.empty) {
+              memsSnap.docs.forEach(mDoc => {
+                const mData = mDoc.data();
+                if (mData.facts && Array.isArray(mData.facts)) {
+                  facts.push(...mData.facts);
+                } else if (mData.fact) {
+                  facts.push(mData.fact);
+                }
+              });
+            }
+            if (facts.length > 0 || uData.summary) {
+              servers.push({
+                serverName: uData.username || `Usuario (${uDoc.id})`,
+                facts,
+                summary: uData.summary || ''
+              });
+            }
+          }
+          if (servers.length > 0) {
+            return res.json({ type: 'all_servers', count: servers.length, servers });
+          }
+        }
+      }
+
       const serverMemories = getAllUserServerMemories(null);
       res.json({
         type: 'all_servers',
@@ -308,6 +329,15 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   // 8. Purga de memoria (específica o global)
   app.post('/api/memory/purge', async (req, res) => {
     try {
+      if (!client.user) {
+        const remotePurge = await fetchFromBot('/api/memory/purge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(req.body)
+        });
+        if (remotePurge) return res.json(remotePurge);
+      }
+
       const { scope, userId, guildId } = req.body;
 
       if (scope === 'all_global') {
