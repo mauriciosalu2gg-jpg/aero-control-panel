@@ -768,40 +768,39 @@
 
         <!-- ===================== PANEL CONFIG ===================== -->
         <section class="panel glass" id="panel-config">
-          <h2>Config <span class="badge">Ajustes de IA</span></h2>
-          <p class="desc">Selecciona y modifica el proveedor primario de IA y credenciales en tiempo real sin reiniciar el bot.</p>
+          <h2>Estado de IA <span class="badge">Proveedores y Respaldo</span></h2>
+          <p class="desc">Consulta el proveedor principal activo y la escalera de salvamento automática si ocurre un límite o error de API.</p>
 
-          <div class="field" style="margin-top:10px;">
-            <label for="cfg-provider">Proveedor Primario Activo</label>
-            <div class="input-wrap">
-              <select id="cfg-provider" style="width:100%; background:transparent; border:none; color:#fff; font-size:14px; outline:none; padding:10px;">
-                <option value="auto" style="background:#111;">Auto (Rotación Dinámica)</option>
-                <option value="groq" style="background:#111;">Groq (Recomendado)</option>
-                <option value="gemini" style="background:#111;">Google Gemini</option>
-                <option value="openai" style="background:#111;">OpenAI (GPT-4o)</option>
-                <option value="anthropic" style="background:#111;">Anthropic (Claude)</option>
-                <option value="openrouter" style="background:#111;">OpenRouter</option>
-              </select>
+          <div class="glass" style="padding:20px; border-radius:20px; margin-top:10px; background:rgba(255,255,255,0.03);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <span style="font-weight:600; font-size:14px; color:#fff;">🟢 Proveedor Principal Activo:</span>
+              <span id="active-provider-name" class="badge" style="background:rgba(94,232,181,0.2); color:#5ee8b5; font-weight:700; padding:6px 12px;">Google Gemini</span>
             </div>
+
+            <h3 style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.8); margin-top:16px; margin-bottom:8px;">🛡️ Proveedores de Salvamento y Respaldo Automático:</h3>
+            <p style="font-size:12px; color:rgba(255,255,255,0.6); margin-bottom:12px;">
+              Si el proveedor principal llega al límite o sufre un error de API, el sistema cambia automáticamente al siguiente respaldo activo sin interrumpir la conversación.
+            </p>
+
+            <ul id="backup-providers-list" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+              <li style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+                <span>🔹 <strong>Google Gemini</strong> (Gemini 2.0 Flash / Pro)</span>
+                <span style="color:#5ee8b5; font-size:12px;">(Principal / Activo ✅)</span>
+              </li>
+              <li style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+                <span>🔹 <strong>OpenAI</strong> (GPT-4o / GPT-4o-mini)</span>
+                <span style="color:#5ee8b5; font-size:12px;">(Respaldo Activo ✅)</span>
+              </li>
+              <li style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+                <span>🔹 <strong>OpenRouter</strong> (Multi-modelo global)</span>
+                <span style="color:#5ee8b5; font-size:12px;">(Respaldo Activo ✅)</span>
+              </li>
+              <li style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+                <span>🔹 <strong>Anthropic</strong> (Claude 3.5 Sonnet / Haiku)</span>
+                <span style="color:#5ee8b5; font-size:12px;">(Respaldo Activo ✅)</span>
+              </li>
+            </ul>
           </div>
-
-          <div class="field">
-            <label for="cfg-model">Modelo de IA Preferido (Opcional)</label>
-            <div class="input-wrap">
-              <input id="cfg-model" type="text" placeholder="ej: llama-3.3-70b-versatile, gemini-2.0-flash">
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="cfg-key">API Key del Proveedor (Opcional)</label>
-            <div class="input-wrap">
-              <input id="cfg-key" type="password" placeholder="gsk_... / AIzaSy...">
-            </div>
-          </div>
-
-          <div id="cfg-status" style="display:none; font-size:12.5px; padding:10px; border-radius:10px; background:rgba(94,232,181,0.15); color:#5ee8b5; margin-top:6px;"></div>
-
-          <button id="btn-save-cfg" class="glass-btn" style="margin-top:14px;">Guardar Ajustes en Tiempo Real</button>
         </section>
 
         <!-- ===================== PANEL BOT ===================== -->
@@ -879,8 +878,6 @@
 <script>
 (function(){
   "use strict";
-
-  const VALID_USER = { name: "Lara", number: "2332", pass: "Mauri2332" };
 
   function applyDeviceClass(){
     const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
@@ -1282,18 +1279,17 @@
       if (document.getElementById('metric-tokens')) document.getElementById('metric-tokens').textContent = (data.tokenUsage || 0).toLocaleString();
 
       if (data.activeProviders && data.activeProviders.length > 0) {
-        const pSelect = document.getElementById('cfg-provider');
-        if (pSelect && pSelect.options.length <= 7) {
-          pSelect.innerHTML = '<option value="auto" style="background:#111;">Auto (Rotación Dinámica)</option>';
-          const allProviders = ['groq', 'gemini', 'openai', 'anthropic', 'openrouter', 'cerebras', 'huggingface', 'mistral', 'cohere'];
-          allProviders.forEach(p => {
-            const isConfigured = data.activeProviders.includes(p);
-            const opt = document.createElement('option');
-            opt.value = p;
-            opt.textContent = p.toUpperCase() + (isConfigured ? ' (Activo ✅)' : ' (Sin API Key)');
-            opt.style.background = '#111';
-            pSelect.appendChild(opt);
-          });
+        const activeNameEl = document.getElementById('active-provider-name');
+        if (activeNameEl) activeNameEl.textContent = data.activeProviders[0].toUpperCase() + ' (Activo ✅)';
+
+        const listEl = document.getElementById('backup-providers-list');
+        if (listEl) {
+          listEl.innerHTML = data.activeProviders.map((p, idx) => `
+            <li style="padding:10px 14px; background:rgba(255,255,255,0.05); border-radius:10px; font-size:13px; display:flex; align-items:center; justify-content:space-between;">
+              <span>🔹 <strong>${p.toUpperCase()}</strong></span>
+              <span style="color:#5ee8b5; font-size:12px;">${idx === 0 ? '(Principal / Activo ✅)' : '(Respaldo Automático ✅)'}</span>
+            </li>
+          `).join('');
         }
       }
     } catch {}
