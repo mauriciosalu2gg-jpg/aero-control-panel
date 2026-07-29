@@ -1212,6 +1212,8 @@ client.on('messageCreate', async (message) => {
         model: 'DirectRecall'
       };
     } else {
+      const isShortInput = /^(oli|ola|hola|que onda|qué onda|q haces|que haces|saludos|buenas|buen dia|que tal|q tal|wena|wenas)\b/i.test(cleanContent) || cleanContent.trim().length <= 12;
+
       response = await askAI(llmHistory, recentTokens, {
         moodInfo,
         intent,
@@ -1228,6 +1230,7 @@ client.on('messageCreate', async (message) => {
         securityMode: flags.securityMode,
         botPersonality: flags.botPersonality || 'asistente',
         userPoints,
+        isShortInput,
       });
     }
 
