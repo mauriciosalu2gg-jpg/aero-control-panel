@@ -229,4 +229,14 @@ export function startWebServer(client, port = process.env.PORT || 3000) {
   return server;
 }
 
+if (process.argv[1] && process.argv[1].endsWith('server.js')) {
+  const dummyClient = {
+    guilds: { cache: new Map() },
+    users: { cache: new Map() },
+    ws: { status: 0, ping: 25 },
+    user: { username: 'Novarito Admin', displayAvatarURL: () => null }
+  };
+  startWebServer(dummyClient, process.env.PORT || 3000);
+}
+
 export default { startWebServer };

@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: novarito-bot-admin
+    name: aero-control-panel
     env: node
     region: oregon
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: PORT
         value: 10000
