@@ -968,6 +968,12 @@ client.on('messageCreate', async (message) => {
   activeUserProcesses.add(message.author.id);
 
   try {
+    // ── FAST PATH: mensajes cortísimos o saludos simples ──────────────────────
+    // Si es un saludo o mensaje muy corto SIN intención de memoria, saltamos todo
+    // el pipeline pesado y respondemos directo con contexto mínimo.
+    const isFastPath = /^(oli|ola|hola|hey|hi|wenas?|buenas?|qu[eé] onda|qu[eé] haces?|q haces?|q tal|qu[eé] tal|saludos?|neta qu[eé]|qué tal|todo bien|oye|oiga|ey)[\s!?.,]*$/i.test(cleanContent.toLowerCase())
+      || (cleanContent.trim().length <= 10 && !/recuerd|guarda|sab[eé]s|memoria|qu[eé] me|qu[eé] te|qui[eé]n|cu[aá]ndo/i.test(cleanContent));
+
     // 1. Memoria persistente del usuario
     const userConfig = await getUserMemoryConfig(message.author.id);
     const memoryIntent = detectMemoryIntent(content);
@@ -975,10 +981,51 @@ client.on('messageCreate', async (message) => {
     let thinkingInterval = null;
     let thinkingStart = Date.now();
     let activeTopicLabel = 'charla';
-    const thinkingState = await startThinkingStatus(message);
+
+    // En fast path no mostramos el "Pensando..." para que se sienta instantáneo
+    if (!isFastPath) {
+      const thinkingState2 = await startThinkingStatus(message);
+      thinkingMsg = thinkingState2.msg;
+      thinkingInterval = thinkingState2.interval;
+      thinkingStart = thinkingState2.start;
+    }
+    const thinkingState = isFastPath
+      ? { msg: null, interval: null, start: Date.now(), stop: () => {}, memoryStatusLine: null }
+      : { msg: thinkingMsg, interval: thinkingInterval, start: thinkingStart, stop: () => { if (thinkingInterval) clearInterval(thinkingInterval); }, memoryStatusLine: null };
     thinkingMsg = thinkingState.msg;
     thinkingInterval = thinkingState.interval;
     thinkingStart = thinkingState.start;
+
+    if (isFastPath && !memoryIntent.isExplicit) {
+      // ── Respuesta ultrarrápida sin cargar toda la memoria ──
+      const { getManualMood } = await import('./core/moodEngine.js');
+      const fastMoodInfo = {
+        mood: getManualMood(guildId) || 'alegre',
+        intensity: 1,
+        source: 'auto',
+      };
+      const fastResponse = await askAI(
+        [{ role: 'user', content }],
+        0,
+        {
+          moodInfo: fastMoodInfo,
+          intent: 'chat',
+          isShortInput: true,
+          guild: message.guild,
+          channelName: message.channel?.name,
+          swearingAllowed: getFlags(guildId).swearing,
+          userPoints: 0,
+        }
+      );
+      const fastText = (fastResponse?.text || '...').trim();
+      await message.reply(fastText).catch(() =>
+        message.channel.send(fastText).catch(() => {})
+      );
+      if (guildId) config.addTokenUsage(guildId, fastResponse?.tokens || estimateTokens(fastText));
+      activeUserProcesses.delete(message.author.id);
+      return;
+    }
+
 
     // Si es una petición explícita de memoria, iniciar UI INMEDIATAMENTE en paralelo
     let memoryUiPromise = null;
