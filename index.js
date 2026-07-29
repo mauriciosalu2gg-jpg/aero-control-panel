@@ -1237,6 +1237,8 @@ client.on('messageCreate', async (message) => {
     
     const conversationSummary = [summaryForAI, summary, mediaSummary].filter(Boolean).join('\n\n');
     let response;
+    let isShortInput = false; // se sobreescribe en el bloque else de abajo si aplica
+
     if (memoryIntent?.isRecall && rememberedFacts.length === 0) {
       const errStatus = formatMemoryErrorStatus('insufficient');
       if (thinkingState) thinkingState.memoryStatusLine = errStatus;
@@ -1257,7 +1259,8 @@ client.on('messageCreate', async (message) => {
         model: 'DirectRecall'
       };
     } else {
-      const isShortInput = /^(oli|ola|hola|que onda|qué onda|q haces|que haces|saludos|buenas|buen dia|que tal|q tal|wena|wenas)\b/i.test(cleanContent) || cleanContent.trim().length <= 12;
+      // isShortInput se declara AQUI en el scope externo para que sea accesible después
+      isShortInput = /^(oli|ola|hola|que onda|qué onda|q haces|que haces|saludos|buenas|buen dia|que tal|q tal|wena|wenas)\b/i.test(cleanContent) || cleanContent.trim().length <= 12;
 
       response = await askAI(llmHistory, recentTokens, {
         moodInfo,
@@ -1331,18 +1334,13 @@ client.on('messageCreate', async (message) => {
 
     if (guildId) config.addTokenUsage(guildId, response.tokens || estimateTokens(response.text));
 
-    // 7. Delay humano dinamico
+    // 7. Delay humano dinámico — mensajes cortos responden casi al instante
     let thinkingMs = computeThinkingDelay({
       responseText: response.text,
       moodInfo,
       incomingLength: content.length,
+      isShortInput: !!isShortInput,
     });
-    
-    // Respuestas Rápidas para Mensajes Cortitos
-    const isShortMessage = content.trim().length <= 12 || content.split(/\s+/).length <= 3;
-    if (isShortMessage) {
-      thinkingMs = 150; // Delay corto de 150ms
-    }
     await humanizedTyping(message.channel, thinkingMs);
 
     // ═══════════════════════════════════════════════════════

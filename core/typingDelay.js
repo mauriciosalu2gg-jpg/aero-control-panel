@@ -16,44 +16,49 @@ const MAX_DELAY_MS = 3 * 60 * 1000; // 3 minutos, techo absoluto real
  * @param {number} params.incomingLength - largo del mensaje del usuario
  * @returns {number} milisegundos a esperar antes de mandar la respuesta
  */
-export function computeThinkingDelay({ responseText = '', moodInfo = {}, incomingLength = 0 } = {}) {
+export function computeThinkingDelay({ responseText = '', moodInfo = {}, incomingLength = 0, isShortInput = false } = {}) {
   const { mood, intensity = 1, serious = false, crisis = false } = moodInfo;
 
-  // En situaciones de crisis real NUNCA hacemos esperar de mas: prioridad
-  // total a responder rapido y con calma, sin jugar al "delay humano" aca.
+  // Crisis: siempre rápido, prioridad total.
   if (crisis) {
     return 350 + Math.random() * 900;
   }
 
-  // Mensajes realmente largos: 2-3 min. Mensajes normales/cortos:
-  // alrededor de 1 min como maximo "humano" habitual.
-  const textWeight = Math.max(incomingLength, responseText.length);
-  if (textWeight >= 900) {
-    return 2 * 60 * 1000 + Math.random() * 60 * 1000;
+  // Saludos y mensajes muy cortos: respuesta casi inmediata (0.8s – 2.5s)
+  if (isShortInput) {
+    return 800 + Math.random() * 1700;
   }
 
+  const textWeight = Math.max(incomingLength, responseText.length);
+
+  // Mensajes largos: 30s – 75s (antes 2–3 min, demasiado)
+  if (textWeight >= 900) {
+    return 30_000 + Math.random() * 45_000;
+  }
+
+  // Mensajes medianos: 6s – 18s (antes 45s – 90s)
   if (textWeight >= 250) {
-    return 45 * 1000 + Math.random() * 45 * 1000;
+    return 6000 + Math.random() * 12_000;
   }
 
   // ── Rango corto/medio ──
-  let baseMs = 5000 + Math.random() * 12000;
+  let baseMs = 1800 + Math.random() * 5000;
 
-  const lengthFactor = Math.min(responseText.length, 600) * 12;
+  const lengthFactor = Math.min(responseText.length, 600) * 5;
   baseMs += lengthFactor;
 
-  if (incomingLength > 120) baseMs += 4000 + Math.random() * 8000;
+  if (incomingLength > 120) baseMs += 1500 + Math.random() * 3000;
 
-  if (serious) baseMs += 8000 + Math.random() * 12000;
-  else if (mood === 'triste') baseMs += 5000 + Math.random() * 9000;
+  if (serious) baseMs += 3000 + Math.random() * 5000;
+  else if (mood === 'triste') baseMs += 2000 + Math.random() * 4000;
 
   if ((mood === 'hype' || mood === 'divertido') && intensity >= 2) {
-    baseMs *= 0.75;
+    baseMs *= 0.65;
   }
 
-  const jitter = (Math.random() - 0.5) * 4000;
+  const jitter = (Math.random() - 0.5) * 1500;
   baseMs += jitter;
-  return Math.max(8000, Math.min(baseMs, 60_000));
+  return Math.max(1200, Math.min(baseMs, 20_000));
 }
 
 /**
