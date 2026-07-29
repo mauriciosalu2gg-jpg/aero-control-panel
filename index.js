@@ -217,7 +217,7 @@ async function startThinkingStatus(message, { emoji = EMOJIS.thinking, label = '
     state.interval = setInterval(() => {
       state.dots = (state.dots % 3) + 1;
       state.msg.edit(render()).catch(() => null);
-    }, 1600);
+    }, 900); // 900ms — puntos más ágiles visualmente
   } catch (err) {
     console.warn('[ui] No se pudo enviar estado de pensamiento:', err.message);
   }
@@ -242,9 +242,9 @@ async function updateThinkingStatus(state, { emoji, label } = {}) {
 
 function memoryUiTiming(content, mode) {
   return {
-    introMs: 2200,
-    stepMs: 2500,
-    intervalMs: 1200,
+    introMs: 800,    // antes 2200ms — ahora 0.8s
+    stepMs: 1200,    // antes 2500ms — ahora 1.2s por paso
+    intervalMs: 700, // antes 1200ms — actualización más ágil
   };
 }
 
@@ -252,18 +252,19 @@ function computeExtraThinkingDelay({ baseMs, hasWebContext, intent, memoryIntent
   let minMs = baseMs;
   let maxMs = baseMs;
 
+  // Delays reducidos: el bot debe sentirse ágil, no lento
   if (hasWebContext) {
-    minMs = 4000;
-    maxMs = 20000;
+    minMs = 1200;
+    maxMs = 4000;
   } else if (intent === 'document') {
-    minMs = 4500;
-    maxMs = 18000;
+    minMs = 1500;
+    maxMs = 4500;
   } else if (memoryIntent?.isExplicit) {
-    minMs = 3500;
-    maxMs = 14000;
+    minMs = 800;
+    maxMs = 2500;
   }
 
-  if (contentLength > 2500) maxMs = Math.max(maxMs, 16000);
+  if (contentLength > 2500) maxMs = Math.min(maxMs + 2000, 6000);
   if (maxMs <= minMs) return minMs;
   return clamp(minMs + Math.floor(Math.random() * (maxMs - minMs + 1)), minMs, maxMs);
 }

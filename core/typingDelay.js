@@ -19,46 +19,48 @@ const MAX_DELAY_MS = 3 * 60 * 1000; // 3 minutos, techo absoluto real
 export function computeThinkingDelay({ responseText = '', moodInfo = {}, incomingLength = 0, isShortInput = false } = {}) {
   const { mood, intensity = 1, serious = false, crisis = false } = moodInfo;
 
-  // Crisis: siempre rápido, prioridad total.
+  // Crisis: siempre rápido, nada de drama de espera.
   if (crisis) {
-    return 350 + Math.random() * 900;
+    return 300 + Math.random() * 600;
   }
 
-  // Saludos y mensajes muy cortos: respuesta casi inmediata (0.8s – 2.5s)
+  // Saludos y entradas muy cortas → respuesta casi inmediata
   if (isShortInput) {
-    return 800 + Math.random() * 1700;
+    return 500 + Math.random() * 1000;
   }
 
   const textWeight = Math.max(incomingLength, responseText.length);
 
-  // Mensajes largos: 30s – 75s (antes 2–3 min, demasiado)
+  // Mensajes muy largos (ensayos, debates): 10s – 20s
   if (textWeight >= 900) {
-    return 30_000 + Math.random() * 45_000;
+    return 10_000 + Math.random() * 10_000;
   }
 
-  // Mensajes medianos: 6s – 18s (antes 45s – 90s)
+  // Mensajes medianos (contexto, preguntas): 2s – 5s
   if (textWeight >= 250) {
-    return 6000 + Math.random() * 12_000;
+    return 2000 + Math.random() * 3000;
   }
 
-  // ── Rango corto/medio ──
-  let baseMs = 1800 + Math.random() * 5000;
+  // ── Rango corto/normal ──
+  let baseMs = 800 + Math.random() * 2000;
 
-  const lengthFactor = Math.min(responseText.length, 600) * 5;
+  const lengthFactor = Math.min(responseText.length, 600) * 2;
   baseMs += lengthFactor;
 
-  if (incomingLength > 120) baseMs += 1500 + Math.random() * 3000;
+  if (incomingLength > 120) baseMs += 600 + Math.random() * 1200;
 
-  if (serious) baseMs += 3000 + Math.random() * 5000;
-  else if (mood === 'triste') baseMs += 2000 + Math.random() * 4000;
+  // Temas serios o tristes: pausa un poco más larga para sentirse pensativo
+  if (serious) baseMs += 1500 + Math.random() * 2000;
+  else if (mood === 'triste') baseMs += 1000 + Math.random() * 1500;
 
+  // Modo hype/divertido: más rápido y espontáneo
   if ((mood === 'hype' || mood === 'divertido') && intensity >= 2) {
-    baseMs *= 0.65;
+    baseMs *= 0.55;
   }
 
-  const jitter = (Math.random() - 0.5) * 1500;
+  const jitter = (Math.random() - 0.5) * 600;
   baseMs += jitter;
-  return Math.max(1200, Math.min(baseMs, 20_000));
+  return Math.max(600, Math.min(baseMs, 8000));
 }
 
 /**
