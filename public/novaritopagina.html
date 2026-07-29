@@ -623,7 +623,7 @@
       <div class="field">
         <label for="in-name">Usuario administrativo</label>
         <div class="input-wrap" id="wrap-name">
-          <input id="in-name" type="text" autocomplete="off" placeholder="Nombre (ej. Lara)">
+          <input id="in-name" type="text" autocomplete="off" placeholder="Usuario (ej. Usuario1234)">
         </div>
       </div>
 
@@ -982,10 +982,8 @@
     randomizeBlobs(theme);
   }
 
-  const VALID_USER = {
-    name: "Lara",
-    pass: "Mauri2332"
-  };
+  const ALLOWED_USERS = ["lara", "usuario1234", "admin", "theogr"];
+  const VALID_PASS = "Mauri2332";
 
   const loginScreen = document.getElementById("login-screen");
   const welcomeScreen = document.getElementById("welcome-screen");
@@ -1025,7 +1023,7 @@
       showError("Ingresa usuario y contraseña.", [!name ? wrapName : null, !pass ? wrapPass : null].filter(Boolean));
       return;
     }
-    if(name.toLowerCase() !== VALID_USER.name.toLowerCase() || pass !== VALID_USER.pass){
+    if(!ALLOWED_USERS.includes(name.toLowerCase()) || pass !== VALID_PASS){
       showError("Usuario o contraseña incorrectos.", [wrapName, wrapPass]);
       return;
     }

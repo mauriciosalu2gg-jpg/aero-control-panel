@@ -1328,69 +1328,45 @@ client.on('messageCreate', async (message) => {
 
     // 9. Fragmentar la respuesta como escribe una persona real
     const parts = splitHumanized(cleanText, moodInfo);
-    let firstMessageEdited = false;
-    
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const chunks = part.match(/[\s\S]{1,1900}/g) || ['...'];
-      
-      for (let j = 0; j < chunks.length; j++) {
-        const chunk = chunks[j];
-        
-        if (!firstMessageEdited && thinkingMsg) {
-          const fullContent = `${pingPrefix}${chunk}`;
-          if (thinkingState) thinkingState.aiResponseText = fullContent;
-          const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
-          let footerStr = thinkingLine;
-          if (thinkingState?.memoryStatusLine) {
-            footerStr = `${thinkingLine}\n${thinkingState.memoryStatusLine}`;
-          }
-          await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
-          firstMessageEdited = true;
 
-          // Regla global: El indicador de estado (-# ) se elimina automáticamente tras 4-5 segundos
-          setTimeout(async () => {
-            try {
-              if (thinkingMsg) {
-                await thinkingMsg.edit(fullContent).catch(() => null);
-              }
-            } catch { /* ignore */ }
-          }, 4500);
-        } else {
-          await message.channel.send(chunk);
-        }
+    if (parts.length === 1) {
+      const fullContent = `${pingPrefix}${parts[0]}`;
+      const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
+      let footerStr = thinkingLine;
+      if (thinkingState?.memoryStatusLine) {
+        footerStr = `${thinkingLine}\n${thinkingState.memoryStatusLine}`;
       }
-      
-      if (i < parts.length - 1) {
+      await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
+
+      setTimeout(async () => {
+        try {
+          if (thinkingMsg) await thinkingMsg.edit(fullContent).catch(() => null);
+        } catch {}
+      }, 4500);
+    } else {
+      // Enviar las primeras partes directamente como mensajes normales
+      for (let i = 0; i < parts.length - 1; i++) {
+        const partContent = (i === 0 ? pingPrefix : '') + parts[i];
+        await message.channel.send(partContent).catch(() => null);
         await new Promise(r => setTimeout(r, delayBetweenParts()));
         await message.channel.sendTyping().catch(() => {});
       }
-    }
 
-    // Ghost effect for implicit memory
-    if (triggerGhostMemory && thinkingMsg && firstMessageEdited) {
-      (async () => {
+      // La ÚLTIMA parte edita el mensaje thinkingMsg para poner el pie de pensamiento al final
+      const lastPart = parts[parts.length - 1];
+      const fullContent = lastPart;
+      const thinkingLine = `-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`;
+      let footerStr = thinkingLine;
+      if (thinkingState?.memoryStatusLine) {
+        footerStr = `${thinkingLine}\n${thinkingState.memoryStatusLine}`;
+      }
+      await thinkingMsg.edit(`${fullContent}\n${footerStr}`).catch(() => null);
+
+      setTimeout(async () => {
         try {
-          // Extraemos el prefijo de la última chunk (sin el "Pensó por")
-          const lastChunk = parts[parts.length - 1].match(/[\s\S]{1,1900}/g)?.pop() || '...';
-          const baseText = `${pingPrefix}${lastChunk}`;
-          
-          await sleep(1500);
-          // 1. Muta a Managing memory
-          await thinkingMsg.edit(`${baseText}\n-# ${EMOJIS.memory} *Managing memory...*`).catch(()=>null);
-          await sleep(2000);
-          // 2. Muta a paso compacto
-          await thinkingMsg.edit(`${baseText}\n-# ↳ guardando historial...`).catch(()=>null);
-          await sleep(3500);
-          // 3. Muta a completado
-          await thinkingMsg.edit(`${baseText}\n-# ${EMOJIS.done} *Memoria actualizada*`).catch(()=>null);
-          
-          // 4. Espera 1 minuto
-          await sleep(60000);
-          // 5. Regresa a Pensó por original
-          await thinkingMsg.edit(`${baseText}\n-# ${EMOJIS.thinking} *Pensó por ${thinkingTime}*`).catch(()=>null);
-        } catch(e) {}
-      })();
+          if (thinkingMsg) await thinkingMsg.edit(fullContent).catch(() => null);
+        } catch {}
+      }, 4500);
     }
 
     config.updateBotStatus(client, lastAIResponse);
