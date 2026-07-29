@@ -26,7 +26,6 @@ import { markActivity, startIdleWatcher } from './core/idleFacts.js';
 import { looksSuspicious, analyzeWithAI, getUserPoints, addPoints, getPointsForRule, determineAction, logModeration, isModerationActive, hydrateModerationFlags, processTimedModeration, getModerationState } from './core/moderation/index.js';
 import { handleInteraction } from './interactions/interactionCreate.js';
 import { isPendingFunadorAnswer } from './core/funadorSession.js';
-import { handleApiKeyQuestion } from './commands/apikey.js';
 import { getActiveProvider, startHealthReporting } from './services/ai/providerHealth.js';
 import { db } from './database/firebase.js';
 import { isBasicModel } from './config/providers.js';
@@ -961,9 +960,8 @@ client.on('messageCreate', async (message) => {
   const content = cleanContent || (wasExplicitlyCalled ? 'hola' : '');
   if (!content) return;
 
-  const wasApiKeyQuestion = await handleApiKeyQuestion(message, guildId ? await config.getTokenUsage(guildId).catch(() => null) : null).catch(() => false);
-  if (wasApiKeyQuestion) return;
-  // ----------------------------------
+  if (activeUserProcesses.has(message.author.id)) return;
+  activeUserProcesses.add(message.author.id);
 
   try {
     // 1. Memoria persistente del usuario
